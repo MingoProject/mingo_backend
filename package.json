@@ -9,13 +9,20 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ts-rest/core": "^3.51.0",
+    "@ts-rest/open-api": "^3.51.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.0",
     "next": "15.0.2",
     "react": "19.0.0-rc-02c0e824-20241028",
-    "react-dom": "19.0.0-rc-02c0e824-20241028"
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
