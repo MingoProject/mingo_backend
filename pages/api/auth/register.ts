@@ -56,10 +56,10 @@ export default async function handler(
         password: hashedPassword,
         gender,
         birthDay,
-        attendDate: new Date(), // Ngày tham gia (có thể thay đổi nếu cần)
-        roles: ["user"], // Có thể đặt vai trò mặc định là 'user'
-        flag: true, // Trạng thái mặc định là true
-        createBy: null, // Giữ createBy là rỗng
+        attendDate: new Date(),
+        roles: ["user"],
+        flag: true,
+        createBy: null,
       });
 
       // Lưu người dùng vào cơ sở dữ liệu
