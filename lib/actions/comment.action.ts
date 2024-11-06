@@ -1,7 +1,6 @@
 import Comment from "@/database/comment.model";
 import { CreateCommentDTO, UpdateCommentDTO } from "@/dtos/CommentDTO";
 import { connectToDatabase } from "../mongoose";
-import bcrypt from "bcrypt";
 import mongoose, { Schema } from "mongoose";
 import Post from "@/database/post.model";
 
@@ -37,7 +36,7 @@ export async function createComment(
   }
 }
 
-export async function deleteComment(commentId: Schema.Types.ObjectId) {
+export async function deleteComment(commentId: String) {
   try {
     connectToDatabase();
     const deleteComment = await Comment.findByIdAndDelete(commentId);
@@ -63,10 +62,8 @@ export async function updateComment(
   params: UpdateCommentDTO
 ) {
   try {
-    // Kết nối database nếu cần thiết
     connectToDatabase();
 
-    // Tìm và cập nhật nội dung của comment
     const updatedComment = await Comment.findByIdAndUpdate(
       commentId,
       { content: params.content },
