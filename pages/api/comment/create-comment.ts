@@ -1,6 +1,6 @@
-// pages/api/posts/create.ts
-import { createPost } from "@/lib/actions/post.action";
-import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
+// pages/api/comments/create.ts
+import { createComment } from "@/lib/actions/comment.action";
+import { CreateCommentDTO, CommentResponseDTO } from "@/dtos/CommentDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticateToken } from "@/middleware/auth-middleware";
 
@@ -11,11 +11,19 @@ export default async function handler(
   authenticateToken(req, res, async () => {
     if (req.method === "POST") {
       try {
-        const params: PostCreateDTO = req.body;
+        const { postId } = req.query;
+        if (typeof postId !== "string") {
+          return res.status(400).json({ message: "Invalid postId" });
+        }
+        const params: CreateCommentDTO = req.body;
 
-        const newPost: PostResponseDTO = await createPost(params, req.user?.id);
+        const newComment: CommentResponseDTO = await createComment(
+          params,
+          req.user?.id,
+          postId
+        );
 
-        return res.status(201).json(newPost);
+        return res.status(201).json(newComment);
       } catch (error) {
         console.error(error);
 
