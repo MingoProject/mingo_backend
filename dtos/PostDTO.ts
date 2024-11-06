@@ -1,32 +1,31 @@
-// dtos/PostDTO.ts
 import { Schema } from "mongoose";
 
 export interface PostCreateDTO {
-  content: string; // Nội dung bài viết
-  media?: Schema.Types.ObjectId[]; // Mảng các ID media
-  url?: string; // Đường dẫn bài viết
-  location?: string; // Vị trí
+  content: string;
+  media?: Schema.Types.ObjectId[];
+  url?: string;
+  location?: string;
   privacy?: {
-    type: string; // public, friends, private
-    allowedUsers?: Schema.Types.ObjectId[]; // Mảng các ID người dùng được phép
+    type: string;
+    allowedUsers?: Schema.Types.ObjectId[];
   };
 }
 
 export interface PostResponseDTO {
-  _id: string; // ID bài viết
-  content: string; // Nội dung bài viết
-  media?: Schema.Types.ObjectId[]; // Mảng các ID media
-  url?: string; // Đường dẫn bài viết
-  createdAt: Date; // Ngày tạo
-  author: Schema.Types.ObjectId; // ID tác giả
-  shares: Schema.Types.ObjectId[]; // Mảng các ID người dùng đã chia sẻ
-  likes: Schema.Types.ObjectId[]; // Mảng các ID người dùng đã thích
-  comments: Schema.Types.ObjectId[]; // Mảng các ID bình luận
-  location?: string; // Vị trí
+  _id: string;
+  content: string;
+  media?: Schema.Types.ObjectId[];
+  url?: string;
+  createdAt: Date;
+  author: Schema.Types.ObjectId;
+  shares: Schema.Types.ObjectId[];
+  likes: Schema.Types.ObjectId[];
+  comments: Schema.Types.ObjectId[];
+  location?: string;
   privacy: {
-    type: string; // public, friends, private
-    allowedUsers?: Schema.Types.ObjectId[]; // Mảng các ID người dùng được phép
+    type: string;
+    allowedUsers?: Schema.Types.ObjectId[];
   };
-  likedIds: Schema.Types.ObjectId[]; // Mảng các ID người dùng đã thích
-  flag: boolean; // Cờ trạng thái
+  likedIds: Schema.Types.ObjectId[];
+  flag: boolean;
 }

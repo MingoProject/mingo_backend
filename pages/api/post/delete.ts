@@ -7,17 +7,14 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Kiểm tra phương thức yêu cầu
   if (req.method !== "DELETE") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  // Xác thực token và phân quyền chỉ cho admin
   authenticateToken(req, res, async () => {
     authorizeRole(["admin"])(req, res, async () => {
       const { postId } = req.query;
 
-      // Kiểm tra nếu `userId` không tồn tại hoặc không hợp lệ
       if (!postId || typeof postId !== "string") {
         return res.status(400).json({ message: "Post ID is required" });
       }

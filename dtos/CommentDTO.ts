@@ -1,95 +1,21 @@
-import { Schema } from "mongoose";
-export interface UserRegisterDTO {
-  firstName: string;
-  lastName: string;
-  nickName: string;
-  phoneNumber: string;
-  email: string;
-  password: string;
-  rePassword: string;
-  gender: boolean;
-  birthDay: Date;
+import mongoose, { Schema } from "mongoose";
+
+export interface UpdateCommentDTO {
+  content: string;
+}
+export interface CreateCommentDTO {
+  userId: Schema.Types.ObjectId;
+  content: string;
+  parentId?: Schema.Types.ObjectId;
 }
 
-export interface UserLoginDTO {
-  phoneNumber: string;
-  password: string;
-}
-export interface AuthenticationDTO {
-  message: string;
-  token: string;
-}
-
-export interface UserResponseDTO {
+export interface CommentResponseDTO {
   _id: string;
-  firstName: string;
-  lastName: string;
-  nickName: string;
-  phoneNumber: string;
-  email: string;
-  role: string[];
-  avatar: string;
-  background: string;
-  gender: boolean;
-  address: string;
-  job: string;
-  hobbies: string[];
-  bio: string;
-  point: number;
-  relationShip: string;
-  birthDay: Date;
-  attendDate: Date;
-  flag: boolean;
-  friendIds: Schema.Types.ObjectId[];
-  bestFriendIds: Schema.Types.ObjectId[];
-  blockedIds: Schema.Types.ObjectId[];
-  createAt: Date;
+  userId: Schema.Types.ObjectId;
+  content: string;
+  createdTime: Date;
+  parentId?: Schema.Types.ObjectId;
+  replies?: CommentResponseDTO[];
   createBy: Schema.Types.ObjectId;
-}
-
-export interface UpdateUserDTO {
-  firstName: string;
-  lastName: string;
-  nickName: string;
-  gender: boolean;
-  address: string;
-  job: string;
-  hobbies: string[];
-  bio: string;
-  relationShip: string;
-  birthDay: Date;
-}
-
-export interface UpdateAvatarDTO {
-  avatar: string;
-  avatarPublicId: string;
-}
-
-export interface UpdateBackgroundDTO {
-  background: string;
-  backgroundPublicId: string;
-}
-
-export interface PublicUserDTO {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  nickName: string;
-  gender: boolean;
-  address: string;
-  job: string;
-  hobbies: string[];
-  bio: string;
-  relationShip: string;
-  birthDay: Date;
-  relations: string[];
-}
-
-export interface FindUserDTO {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  nickName: string;
-  avatar: string;
-  relation: string;
+  createAt: Date;
 }

@@ -52,7 +52,6 @@ export async function createUser(
 
     const hashPassword = await bcrypt.hash(params.password, saltRounds);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { rePassword, password, ...userData } = params;
 
     const createUserData = Object.assign({}, userData, {
