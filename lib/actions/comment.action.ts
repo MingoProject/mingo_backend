@@ -58,7 +58,7 @@ export async function deleteComment(commentId: String) {
 }
 
 export async function updateComment(
-  commentId: Schema.Types.ObjectId,
+  commentId: String,
   params: UpdateCommentDTO
 ) {
   try {
