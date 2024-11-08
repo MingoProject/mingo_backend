@@ -7,7 +7,6 @@ export interface MediaCreateDTO {
   author: Schema.Types.ObjectId;
   postId: Schema.Types.ObjectId;
 }
-
 export interface MediaResponseDTO {
   _id: string;
   url: string;
