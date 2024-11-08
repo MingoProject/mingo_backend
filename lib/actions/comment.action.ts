@@ -1,8 +1,24 @@
 import Comment from "@/database/comment.model";
-import { CreateCommentDTO, UpdateCommentDTO } from "@/dtos/CommentDTO";
+import {
+  CreateCommentDTO,
+  UpdateCommentDTO,
+  CommentResponseDTO,
+} from "@/dtos/CommentDTO";
 import { connectToDatabase } from "../mongoose";
 import mongoose, { Schema } from "mongoose";
 import Post from "@/database/post.model";
+
+export async function getAllComments() {
+  try {
+    connectToDatabase();
+    const result: CommentResponseDTO[] = await Comment.find();
+
+    return result;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
 
 export async function createComment(
   params: CreateCommentDTO,
