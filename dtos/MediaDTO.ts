@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+
 export interface MediaCreateDTO {
   url: string;
   type: "image" | "video";
