@@ -31,7 +31,7 @@ export async function createPost(
       author: createBy ? createBy : new mongoose.Types.ObjectId(),
       location: params.location,
       privacy: {
-        type: params.privacy?.type || "public", // Mặc định là public
+        type: params.privacy?.type || "public",
         allowedUsers: params.privacy?.allowedUsers || [],
       },
       shares: [],
