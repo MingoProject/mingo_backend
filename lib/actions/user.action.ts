@@ -108,15 +108,14 @@ export async function createAdmin(
   }
 }
 
-export async function findPairUser(id1: string, id2: string) {
+export async function isUserExists(id: string) {
   try {
     connectToDatabase();
-    const stUser = await User.findById(id1);
-    const ndUser = await User.findById(id2);
-    if (!stUser || !ndUser) {
+    const user = await User.findById(id);
+    if (!user) {
       throw new Error("Your require user is not exist!");
     }
-    return { stUser, ndUser };
+    return user;
   } catch (error) {
     console.log(error);
     throw error;
