@@ -1,11 +1,12 @@
 // lib/actions/post.action.ts
 import { connectToDatabase } from "../mongoose";
 import Post from "@/database/post.model";
-import User from "@/database/user.model";
 import { CommentResponseDTO } from "@/dtos/CommentDTO";
 import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
+import Comment from "@/database/comment.model";
+import User from "@/database/user.model";
 
 export async function getAllPosts() {
   try {
@@ -102,7 +103,7 @@ export async function updatePost(
 }
 
 export async function likePost(
-  postId: string | undefined,
+  postId: String | undefined,
   userId: String | undefined
 ) {
   try {
@@ -130,33 +131,30 @@ export async function likePost(
 }
 
 export const getCommentsByPostId = async (
-  postId: String
+  postId: string
 ): Promise<CommentResponseDTO[]> => {
   try {
-    // Kết nối cơ sở dữ liệu
     await connectToDatabase();
 
-    // Tìm bài viết theo postId và populate comments
-    const post = await Post.findById(postId).populate("comments");
+    const post = await Post.findById(postId).populate({
+      path: "comments",
+      model: Comment,
+    });
 
-    // Nếu bài viết không tồn tại
     if (!post) {
       throw new Error("Post not found");
     }
 
-    // Chuyển đổi các comment sang CommentResponseDTO
     const comments: CommentResponseDTO[] = post.comments.map((comment: any) => {
-      // Populate replies nếu có
-      const populatedComment: CommentResponseDTO = {
-        _id: comment._id.toString(), // Đảm bảo trả về chuỗi thay vì ObjectId
+      return {
+        _id: comment._id.toString(),
         content: comment.content,
         userId: comment.userId,
         createdTime: comment.createdAt,
-        replies: comment.replies, // Giả sử rằng replies là một mảng các comment con đã được populate
+        replies: comment.replies,
         createBy: comment.createBy,
         createAt: comment.createdAt,
       };
-      return populatedComment;
     });
 
     return comments;
@@ -169,22 +167,21 @@ export const getAuthorByPostId = async (
   postId: string
 ): Promise<UserResponseDTO> => {
   try {
-    // Tìm bài viết theo postId và populate trường author
-    const post = await Post.findById(postId).populate("author");
-
-    // Kiểm tra nếu bài viết không tồn tại
+    await connectToDatabase();
+    const post = await Post.findById(postId).populate({
+      path: "author",
+      model: User,
+    });
     if (!post) {
-      throw new Error("Post not found"); // Thông báo lỗi nếu không tìm thấy bài viết
+      throw new Error("Post not found");
     }
 
-    // Kiểm tra nếu bài viết không có tác giả
     if (!post.author) {
-      throw new Error("Author not found"); // Thông báo lỗi nếu không có tác giả
+      throw new Error("Author not found");
     }
 
     const author = post.author;
 
-    // Trả về dữ liệu tác giả
     const authorDTO: UserResponseDTO = {
       _id: author._id.toString(),
       firstName: author.firstName,
@@ -214,7 +211,6 @@ export const getAuthorByPostId = async (
 
     return authorDTO; // Trả về thông tin tác giả
   } catch (error: any) {
-    // Ném lỗi với thông điệp chi tiết
     console.error("Error fetching author: ", error);
     throw new Error("Error fetching author: " + error.message);
   }

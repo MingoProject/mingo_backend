@@ -2,6 +2,19 @@ import { connectToDatabase } from "../mongoose";
 import Media from "@/database/media.model";
 import { MediaCreateDTO, MediaResponseDTO } from "@/dtos/MediaDTO";
 import mongoose, { Schema } from "mongoose";
+
+export async function getAllComments() {
+  try {
+    connectToDatabase();
+    const result: MediaResponseDTO[] = await Media.find();
+
+    return result;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
 export async function createMedia(
   params: MediaCreateDTO,
   createBy: Schema.Types.ObjectId | undefined
