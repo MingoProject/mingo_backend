@@ -31,7 +31,7 @@ export async function createComment(
     const newComment = await Comment.create({
       userId: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
-      parentId: params.parentId || null,
+      replies: params.replies || null,
       createdAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
@@ -52,9 +52,11 @@ export async function createComment(
   }
 }
 
-export async function deleteComment(commentId: String) {
+export async function deleteComment(commentId: string, postId: string) {
   try {
     connectToDatabase();
+
+    // Xóa comment khỏi Comment model
     const deleteComment = await Comment.findByIdAndDelete(commentId);
     if (!deleteComment) {
       return {
@@ -63,9 +65,18 @@ export async function deleteComment(commentId: String) {
       };
     }
 
+    // Cập nhật Post để xóa comment khỏi danh sách comments
+    await Post.findByIdAndUpdate(
+      postId,
+      {
+        $pull: { comments: commentId }, // Xóa commentId khỏi array comments
+      },
+      { new: true }
+    );
+
     return {
       status: true,
-      message: `Comment with ID ${commentId} has been deleted.`,
+      message: `Comment with ID ${commentId} has been deleted from post.`,
     };
   } catch (error) {
     console.error(error);

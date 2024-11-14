@@ -10,16 +10,15 @@ export default async function handler(
   await corsMiddleware(req, res, async () => {
     if (req.method === "GET") {
       try {
-        const { postId } = req.query; // Lấy postId từ query string
+        const { postId } = req.query;
 
         if (!postId) {
           return res.status(400).json({ message: "Post ID is required" });
         }
 
-        // Gọi hàm getCommentsByPostId và truyền vào postId
         const posts = await getCommentsByPostId(postId as string);
 
-        res.status(200).json(posts); // Trả về danh sách comment
+        res.status(200).json(posts);
       } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });

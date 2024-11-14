@@ -1,13 +1,15 @@
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import { getAllUsers } from "@/lib/actions/user.action";
-import { authenticateToken } from "@/middleware/auth-middleware";
+import corsMiddleware, {
+  authenticateToken,
+} from "@/middleware/auth-middleware";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<UserResponseDTO[] | { message: string }>
 ) {
-  authenticateToken(req, res, async () => {
+  await corsMiddleware(req, res, async () => {
     if (req.method === "GET") {
       try {
         const users = await getAllUsers();

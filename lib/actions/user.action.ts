@@ -123,8 +123,8 @@ export async function isUserExists(id: string) {
 }
 
 export async function findUser(
-  phoneNumber: string | undefined,
-  userId: Schema.Types.ObjectId | undefined
+  phoneNumber: string | undefined
+  // userId: Schema.Types.ObjectId | undefined
 ) {
   try {
     connectToDatabase();
@@ -177,7 +177,7 @@ export async function findUser(
     //     }
     //   }
     // }
-    // return result;
+    return result;
   } catch (error) {
     console.log(error);
     throw error;
@@ -230,7 +230,7 @@ export async function disableUser(userId: string) {
   }
 }
 
-export async function getMyProfile(id: Schema.Types.ObjectId | undefined) {
+export async function getMyProfile(id: String | undefined) {
   try {
     connectToDatabase();
     const myProfile: UserResponseDTO | null = await User.findById(id);

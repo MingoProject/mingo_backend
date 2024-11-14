@@ -1,23 +1,19 @@
-import { UserRegisterDTO, UserResponseDTO } from "@/dtos/UserDTO";
-import { createUser } from "@/lib/actions/user.action";
-import corsMiddleware from "@/middleware/auth-middleware";
-import type { NextApiRequest, NextApiResponse } from "next";
+import { FriendRequestDTO } from "@/dtos/FriendDTO";
+import { acceptFriendRequest } from "@/lib/actions/friend.action";
+import cors, { authenticateToken } from "@/middleware/auth-middleware";
+import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await corsMiddleware(req, res, async () => {
+  cors(req, res, async () => {
+    // authenticateToken(req, res, async () => {
     if (req.method === "POST") {
       try {
-        const params: UserRegisterDTO = req.body;
-
-        const newUser: UserResponseDTO | undefined = await createUser(
-          params,
-          req.user?.id
-        );
-
-        return res.status(200).json(newUser);
+        const param: FriendRequestDTO = req.body;
+        const requestedRelation = await acceptFriendRequest(param);
+        return res.status(201).json(requestedRelation);
       } catch (error) {
         console.error(error);
 
@@ -32,4 +28,5 @@ export default async function handler(
       return res.status(405).json({ message: "Method Not Allowed" });
     }
   });
+  //   });
 }
