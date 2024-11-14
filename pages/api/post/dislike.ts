@@ -1,4 +1,4 @@
-import { likePost } from "@/lib/actions/post.action";
+import { disLikePost } from "@/lib/actions/post.action";
 import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
 import { authenticateToken } from "@/middleware/auth-middleware";
@@ -15,7 +15,7 @@ export default async function handler(
           return res.status(400).json({ message: "Post ID is required" });
         }
 
-        const result = await likePost(postId as string, req.user?.id);
+        const result = await disLikePost(postId as string, req.user?.id);
 
         return res.status(201).json(result);
       } catch (error) {
