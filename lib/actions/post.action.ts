@@ -104,7 +104,7 @@ export async function updatePost(
 
 export async function likePost(
   postId: String | undefined,
-  userId: String | undefined
+  userId: Schema.Types.ObjectId | undefined
 ) {
   try {
     connectToDatabase();
@@ -119,13 +119,36 @@ export async function likePost(
       throw new Error(`User with ID ${userId} does not exist.`);
     }
 
-    await post.likedIds.addToSet(userId);
+    await post.likes.addToSet(userId);
 
     await post.save();
 
     return { message: `Liked post ${postId}` };
   } catch (error) {
     console.error(error);
+    throw error;
+  }
+}
+
+export async function disLikePost(
+  postId: string | undefined,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+    const post = await Post.findById(postId);
+    const user = await User.findById(userId);
+    if (!post || !user) {
+      throw new Error("Your required content does not exist!");
+    }
+
+    await post.likes.pull(userId);
+
+    await post.save();
+
+    return { message: `Disliked post ${postId}` };
+  } catch (error) {
+    console.log(error);
     throw error;
   }
 }
