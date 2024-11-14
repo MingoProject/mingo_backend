@@ -230,7 +230,7 @@ export async function disableUser(userId: string) {
   }
 }
 
-export async function getMyProfile(id: Schema.Types.ObjectId | undefined) {
+export async function getMyProfile(id: String | undefined) {
   try {
     connectToDatabase();
     const myProfile: UserResponseDTO | null = await User.findById(id);

@@ -31,7 +31,7 @@ export async function createComment(
     const newComment = await Comment.create({
       userId: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
-      parentId: params.parentId || null,
+      replies: params.replies || null,
       createdAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),

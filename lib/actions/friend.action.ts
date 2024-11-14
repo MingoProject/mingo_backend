@@ -2,9 +2,12 @@ import Relation from "@/database/relation.model";
 import { FriendRequestDTO } from "@/dtos/FriendDTO";
 import { isUserExists } from "./user.action";
 import User from "@/database/user.model";
+import { connectToDatabase } from "../mongoose";
+import { ObjectId } from "mongodb";
 
 export async function requestAddFriend(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
     const existedFriendRelation = await Relation.findOne({
       stUser: stUser,
@@ -33,6 +36,7 @@ export async function requestAddFriend(param: FriendRequestDTO) {
 
 export async function requestAddBFF(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
     await isUserExists(param.sender);
     await isUserExists(param.receiver);
@@ -70,6 +74,7 @@ export async function requestAddBFF(param: FriendRequestDTO) {
 
 export async function block(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
     await isUserExists(param.sender);
     await isUserExists(param.receiver);
@@ -92,6 +97,7 @@ export async function block(param: FriendRequestDTO) {
       createBy: param.sender,
     });
     const user = await User.findById(param.sender);
+
     await user.blockedIds.addToSet(param.receiver);
     await user.save();
     await unFriend(param);
@@ -106,10 +112,11 @@ export async function acceptFriendRequest(param: FriendRequestDTO) {
   try {
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
-
+    console.log(param.receiver);
+    console.log(param.receiver);
     const existedFriendRequest = await Relation.findOne({
-      receiver: param.receiver,
-      sender: param.sender,
+      sender: new ObjectId(param.sender),
+      receiver: new ObjectId(param.receiver),
       relation: "friend",
       status: false,
     });
@@ -134,6 +141,7 @@ export async function acceptFriendRequest(param: FriendRequestDTO) {
 
 export async function acceptBFFRequest(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
     const existedBFFRequest = await Relation.findOne({
@@ -162,6 +170,7 @@ export async function acceptBFFRequest(param: FriendRequestDTO) {
 
 export async function unFriend(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
     const [stUserId, ndUserId] = [param.sender, param.receiver].sort();
@@ -201,6 +210,7 @@ export async function unFriend(param: FriendRequestDTO) {
 
 export async function unBFF(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
     const [stUserId, ndUserId] = [param.sender, param.receiver].sort();
@@ -229,11 +239,10 @@ export async function unBFF(param: FriendRequestDTO) {
 
 export async function unBlock(param: FriendRequestDTO) {
   try {
+    await connectToDatabase();
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
-    console.log("sender", param.sender);
-    console.log("receiver", param.receiver);
-    const deletedRelation = await Relation.findOneAndDelete({
+    await Relation.findOneAndDelete({
       sender: param.sender,
       receiver: param.receiver,
       relation: "block",
@@ -242,7 +251,6 @@ export async function unBlock(param: FriendRequestDTO) {
       (id: string) => id.toString() !== ndUser._id.toString()
     );
     await stUser.save();
-    console.log(deletedRelation);
   } catch (error) {
     console.log(error);
     throw error;
