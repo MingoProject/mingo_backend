@@ -5,7 +5,7 @@ import { connectToDatabase } from "../mongoose";
 import Message from "@/database/message.model";
 import userModel from "@/database/user.model";
 import mongoose, { Types } from "mongoose";
-import { SegmentMessageDTO } from "@/dtos/MessageDTO";
+import { ChatDTO, SegmentMessageDTO } from "@/dtos/MessageDTO";
 import Text from "@/database/text.model";
 import Image from "@/database/image.model";
 import Icon from "@/database/icon.model";
@@ -613,6 +613,188 @@ export async function findMessages(chatId: string, query: string) {
     }
 
     return { success: true, messages: resultMessages };
+  } catch (error) {
+    console.error("Error searching messages: ", error);
+    throw error;
+  }
+}
+
+// export async function getAllChatsForUser(userId: string): Promise<{
+//   success: boolean;
+//   chats?: ChatDTO[];
+//   message?: string;
+// }> {
+//   try {
+//     await connectToDatabase();
+
+//     const chats = await Chat.find({
+//       $or: [
+//         { sender_id: new Types.ObjectId(userId) },
+//         { receiver_ids: new Types.ObjectId(userId) },
+//       ],
+//     }).populate({
+//       path: "message_ids",
+//       populate: {
+//         path: "contentId",
+//         model: "ContentModel", // Replace this with specific models as needed
+//       },
+//     });
+
+//     if (!chats.length) {
+//       return { success: false, message: "No chats found" };
+//     }
+
+//     const formattedChats = chats.map((chat) => ({
+//       messageBoxId: chat._id.toString(),
+//       messageBox: {
+//         senderId: chat.sender_id.toString(),
+//         receiverIds: chat.receiver_ids.map((id) => id.toString()),
+//         messageIds: chat.message_ids.map((msg) => msg.toString()),
+//         flag: chat.status,
+//         createAt: chat.createdAt,
+//         createBy: chat.createdBy,
+//       },
+//     }));
+
+//     return { success: true, chats: formattedChats };
+//   } catch (error) {
+//     console.error("Error fetching chats:", error);
+//     return {
+//       success: false,
+//       message: "An error occurred while fetching chats",
+//     };
+//   }
+// }
+
+//MANAGEMENT
+export async function getAllMessage() {
+  try {
+    await connectToDatabase();
+    const allMessages = await Message.find();
+
+    const messagesWithContent = await Promise.all(
+      allMessages.map(async (message) => {
+        const populatedContent = await mongoose
+          .model(message.contentModel)
+          .find({ _id: { $in: message.contentId } });
+        return {
+          ...message.toObject(),
+          content: populatedContent,
+        };
+      })
+    );
+
+    return { success: true, messages: messagesWithContent };
+  } catch (error) {
+    console.error("Error fetching all messages: ", error);
+    throw error;
+  }
+}
+
+export async function removeMessage(messageId: string) {
+  try {
+    await connectToDatabase();
+    const message = await Message.findById(messageId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    const { contentModel, contentId: contentIds } = message;
+
+    let ContentModel;
+    switch (contentModel) {
+      case "Text":
+        ContentModel = Text;
+        break;
+      case "Image":
+        ContentModel = Image;
+        break;
+      case "Video":
+        ContentModel = Video;
+        break;
+      case "Voice":
+        ContentModel = Voice;
+        break;
+      default:
+        throw new Error("Invalid content model");
+    }
+
+    await ContentModel.deleteMany({ _id: { $in: contentIds } });
+
+    await Message.findByIdAndDelete(messageId);
+
+    return { success: true, message: "Message removed from database" };
+  } catch (error) {
+    console.error("Error remove messages from database: ", error);
+    throw error;
+  }
+}
+
+export async function searchMessages(id?: string, query?: string) {
+  try {
+    await connectToDatabase();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const conditions: any = {};
+    if (id) {
+      conditions._id = id;
+    }
+
+    const messages = await Message.find(conditions);
+
+    let filteredMessages = messages;
+
+    if (query) {
+      filteredMessages = messages.filter((message) => {
+        return message.contentModel === "Text";
+      });
+
+      const populatedMessages = await Promise.all(
+        filteredMessages.map(async (message) => {
+          const populatedMessage = await Message.findById(message._id).populate(
+            {
+              path: "contentId",
+              model: message.contentModel,
+              select: "",
+            }
+          );
+          return populatedMessage;
+        })
+      );
+
+      const resultMessages = populatedMessages.filter((populatedMessage) => {
+        const content =
+          populatedMessage?.contentId[populatedMessage?.contentId.length - 1];
+        return (
+          content.content &&
+          content.content
+            .toLowerCase()
+            .trim()
+            .includes(query.toLowerCase().trim())
+        );
+      });
+
+      if (resultMessages.length === 0) {
+        return { success: false, messages: [] };
+      }
+
+      return { success: true, messages: resultMessages };
+    }
+
+    //if(ID)
+    const populatedMessages = await Promise.all(
+      filteredMessages.map(async (message) => {
+        const populatedMessage = await Message.findById(message._id).populate({
+          path: "contentId",
+          model: message.contentModel,
+          select: "",
+          options: { strictPopulate: false },
+        });
+        return populatedMessage;
+      })
+    );
+
+    return { success: true, populatedMessages };
   } catch (error) {
     console.error("Error searching messages: ", error);
     throw error;
