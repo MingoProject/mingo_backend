@@ -667,6 +667,7 @@ export async function findMessages(chatId: string, query: string) {
 // }
 
 //MANAGEMENT
+
 export async function getAllMessage() {
   try {
     await connectToDatabase();
@@ -798,5 +799,31 @@ export async function searchMessages(id?: string, query?: string) {
   } catch (error) {
     console.error("Error searching messages: ", error);
     throw error;
+  }
+}
+
+export async function getAllChat(userId: string) {
+  try {
+    // Sử dụng cú pháp new để tạo ObjectId
+    const userObjectId = new Types.ObjectId(userId); // Hoặc: const userObjectId = Types.ObjectId(userId);
+
+    // Tìm tất cả các cuộc trò chuyện có userId là sender hoặc receiver
+    const chats = await Chat.find({
+      $or: [
+        { sender_id: userObjectId }, // Tìm cuộc trò chuyện mà người dùng là sender
+        { receiver_ids: userObjectId }, // Tìm cuộc trò chuyện mà người dùng là receiver
+      ],
+    })
+      .populate("sender_id", "firstName lastName avatar") // Lấy thông tin người gửi
+      .populate("receiver_ids", "firstName lastName avatar") // Lấy thông tin người nhận
+      .populate({
+        path: "message_ids",
+        select: "content sender timestamp", // Lấy thông tin tin nhắn
+      });
+
+    return chats;
+  } catch (error) {
+    console.error("Error fetching chats: ", error);
+    throw new Error("Unable to fetch chats");
   }
 }
