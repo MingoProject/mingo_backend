@@ -15,6 +15,7 @@ export interface UserLoginDTO {
   phoneNumber: string;
   password: string;
 }
+
 export interface AuthenticationDTO {
   message: string;
   token: string;
@@ -33,7 +34,7 @@ export interface UserResponseDTO {
   gender: boolean;
   address: string;
   job: string;
-  hobbies: string;
+  hobbies: string[];
   bio: string;
   point: number;
   relationShip: string;
@@ -54,10 +55,20 @@ export interface UpdateUserDTO {
   gender: boolean;
   address: string;
   job: string;
-  hobbies: string;
+  hobbies: string[];
   bio: string;
   relationShip: string;
   birthDay: Date;
+}
+
+export interface UpdateAvatarDTO {
+  avatar: string;
+  avatarPublicId: string;
+}
+
+export interface UpdateBackgroundDTO {
+  background: string;
+  backgroundPublicId: string;
 }
 
 export interface PublicUserDTO {
@@ -68,12 +79,13 @@ export interface PublicUserDTO {
   gender: boolean;
   address: string;
   job: string;
-  hobbies: string;
+  hobbies: string[];
   bio: string;
   relationShip: string;
   birthDay: Date;
   relations: string[];
 }
+
 export interface FindUserDTO {
   _id: string;
   firstName: string;

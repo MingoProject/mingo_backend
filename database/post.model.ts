@@ -2,7 +2,6 @@ import { Schema, models, model, Document } from "mongoose";
 import { IAudit, AuditSchema } from "./audit.model";
 
 export interface IPost extends Document, IAudit {
-  userId: Schema.Types.ObjectId;
   content: string;
   media?: Schema.Types.ObjectId[];
   url?: string;
@@ -22,7 +21,6 @@ export interface IPost extends Document, IAudit {
 }
 
 const PostSchema = new Schema<IPost>({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   content: { type: String, required: true },
   media: [{ type: Schema.Types.ObjectId, ref: "Media" }],
   url: { type: String },

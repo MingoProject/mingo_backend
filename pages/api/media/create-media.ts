@@ -1,26 +1,23 @@
-import { UserRegisterDTO, UserResponseDTO } from "@/dtos/UserDTO";
-import { createUser } from "@/lib/actions/user.action";
-import corsMiddleware from "@/middleware/auth-middleware";
+import { createMedia } from "@/lib/actions/media.action";
+import { MediaCreateDTO, MediaResponseDTO } from "@/dtos/MediaDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
-
+import { authenticateToken } from "@/middleware/auth-middleware";
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await corsMiddleware(req, res, async () => {
+  authenticateToken(req, res, async () => {
     if (req.method === "POST") {
       try {
-        const params: UserRegisterDTO = req.body;
-
-        const newUser: UserResponseDTO | undefined = await createUser(
+        const params: MediaCreateDTO = req.body;
+        // Tạo mới Media với ID của người tạo lấy từ `req.user`
+        const newMedia: MediaResponseDTO = await createMedia(
           params,
           req.user?.id
         );
-
-        return res.status(200).json(newUser);
+        return res.status(201).json(newMedia);
       } catch (error) {
         console.error(error);
-
         if (error instanceof Error) {
           return res.status(400).json({ message: error.message });
         }

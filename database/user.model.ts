@@ -17,7 +17,6 @@ export interface IUser extends Document, IAudit {
   job: string;
   hobbies: string[];
   bio: string;
-  //   point: number;
   relationShip: string;
   birthDay: Date;
   attendDate: Date;
@@ -45,7 +44,6 @@ const UserSchema = new Schema<IUser>({
   job: { type: String, required: false },
   hobbies: { type: [String], required: false },
   bio: { type: String, required: false },
-  //   point: { type: Number, required: false, default: 0 },
   relationShip: { type: String, required: false },
   birthDay: { type: Date, required: false },
   attendDate: { type: Date, required: true },

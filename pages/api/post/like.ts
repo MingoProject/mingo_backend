@@ -1,23 +1,23 @@
-import { UserRegisterDTO, UserResponseDTO } from "@/dtos/UserDTO";
-import { createUser } from "@/lib/actions/user.action";
-import corsMiddleware from "@/middleware/auth-middleware";
+import { likePost } from "@/lib/actions/post.action";
+import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { authenticateToken } from "@/middleware/auth-middleware";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await corsMiddleware(req, res, async () => {
+  authenticateToken(req, res, async () => {
     if (req.method === "POST") {
       try {
-        const params: UserRegisterDTO = req.body;
+        const { postId } = req.query;
+        if (!postId) {
+          return res.status(400).json({ message: "Post ID is required" });
+        }
 
-        const newUser: UserResponseDTO | undefined = await createUser(
-          params,
-          req.user?.id
-        );
+        const result = await likePost(postId as string, req.user?.id);
 
-        return res.status(200).json(newUser);
+        return res.status(201).json(result);
       } catch (error) {
         console.error(error);
 

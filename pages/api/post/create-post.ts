@@ -1,23 +1,21 @@
-import { UserRegisterDTO, UserResponseDTO } from "@/dtos/UserDTO";
-import { createUser } from "@/lib/actions/user.action";
-import corsMiddleware from "@/middleware/auth-middleware";
+// pages/api/posts/create.ts
+import { createPost } from "@/lib/actions/post.action";
+import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { authenticateToken } from "@/middleware/auth-middleware";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await corsMiddleware(req, res, async () => {
+  authenticateToken(req, res, async () => {
     if (req.method === "POST") {
       try {
-        const params: UserRegisterDTO = req.body;
+        const params: PostCreateDTO = req.body;
 
-        const newUser: UserResponseDTO | undefined = await createUser(
-          params,
-          req.user?.id
-        );
+        const newPost: PostResponseDTO = await createPost(params, req.user?.id);
 
-        return res.status(200).json(newUser);
+        return res.status(201).json(newPost);
       } catch (error) {
         console.error(error);
 
