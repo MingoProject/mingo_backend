@@ -238,3 +238,44 @@ export const getAuthorByPostId = async (
     throw new Error("Error fetching author: " + error.message);
   }
 };
+
+export async function getListLike(userId: string): Promise<PostResponseDTO[]> {
+  try {
+    await connectToDatabase();
+
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    // Tìm tất cả các bài viết mà userId đã like
+    const likedPosts = await Post.find({ likes: userId });
+
+    // Kiểm tra nếu không có bài viết nào được tìm thấy
+    if (!likedPosts.length) {
+      return [];
+    }
+
+    // Chuyển đổi danh sách bài viết thành dạng `PostResponseDTO`
+    const result: PostResponseDTO[] = likedPosts.map((post) => ({
+      _id: post._id.toString(),
+      content: post.content,
+      media: post.media,
+      url: post.url,
+      createdAt: post.createdAt,
+      author: post.author,
+      location: post.location,
+      privacy: post.privacy,
+      shares: post.shares,
+      likes: post.likes,
+      comments: post.comments,
+      likedIds: post.likedIds,
+      flag: post.flag,
+      createBy: post.createBy,
+    }));
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching liked posts: ", error);
+    throw new Error("Error fetching liked posts: " + error);
+  }
+}
