@@ -41,6 +41,7 @@ export async function createPost(
       },
       shares: [],
       likes: [],
+      savedByUsers: [],
       comments: [],
       likedIds: [],
       flag: true,
@@ -247,31 +248,49 @@ export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
     console.log("Database connected.");
 
     if (!userId) {
-      throw new Error("User  ID is required");
+      throw new Error("User ID is required");
     }
 
+    // Find posts that the user has liked
     const posts = await Post.find({ likes: userId })
-      .populate("author", "firstName lastName avatar")
+      .populate("author", "firstName lastName avatar") // Populate author information
       .select("content createdAt author likes");
 
     if (!posts.length) {
       return [];
     }
-    const result: PostYouLikeDTO[] = posts.map((post) => ({
-      _id: post._id.toString(),
-      user_id: userId,
-      post_id: post._id.toString(),
-      created_at: post.createAt ?? new Date(),
-      posts: (post.likes || []).map(() => ({
+
+    // Map through posts and create the required response
+    const result: any[] = [];
+
+    posts.forEach((post) => {
+      const postDate = post.createdAt.toISOString().split("T")[0]; // Get the date part (YYYY-MM-DD)
+
+      // Find if there's already an entry for the same day
+      let dayGroup = result.find((item) => item.created_at === postDate);
+
+      if (!dayGroup) {
+        // If no group for this day exists, create a new group
+        dayGroup = {
+          _id: post._id.toString(),
+          user_id: userId,
+          created_at: postDate, // Grouping by date
+          posts: [],
+        };
+        result.push(dayGroup);
+      }
+
+      // Add the post to the day group
+      dayGroup.posts.push({
         _id: post._id.toString(),
         content: post.content,
         posterName: `${post.author.firstName} ${post.author.lastName}`,
-        posterAva: post.author.avatar
-          ? post.author.avatar
-          : "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg", // Kiểm tra avatar
-        like_at: post.likes.createdAt ?? new Date(),
-      })),
-    }));
+        posterAva:
+          post.author.avatar ||
+          "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg",
+        like_at: new Date(post.likes[0]?.createdAt), // Assuming the first like timestamp
+      });
+    });
 
     return result;
   } catch (error) {
@@ -297,7 +316,10 @@ export async function savePost(
       throw new Error(`User with ID ${userId} does not exist.`);
     }
 
-    await post.saves.addToSet(userId);
+    await Post.updateOne(
+      { _id: postId },
+      { $addToSet: { savedByUsers: userId } } // Thêm userId vào mảng saves nếu chưa có
+    );
 
     await post.save();
 
@@ -320,7 +342,7 @@ export async function unSavePost(
       throw new Error("Your required content does not exist!");
     }
 
-    await post.saves.pull(userId);
+    await post.savedByUsers.pull(userId);
 
     await post.save();
 
@@ -338,31 +360,49 @@ export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
     console.log("Database connected.");
 
     if (!userId) {
-      throw new Error("User  ID is required");
+      throw new Error("User ID is required");
     }
 
-    const posts = await Post.find({ saves: userId })
-      .populate("author", "firstName lastName avatar")
+    // Find posts that the user has liked
+    const posts = await Post.find({ savedByUsers: userId })
+      .populate("author", "firstName lastName avatar") // Populate author information
       .select("content createdAt author likes");
 
     if (!posts.length) {
       return [];
     }
-    const result: PostYouLikeDTO[] = posts.map((post) => ({
-      _id: post._id.toString(),
-      user_id: userId,
-      post_id: post._id.toString(),
-      created_at: new Date(post.createAt) ?? new Date(),
-      posts: (post.saves || []).map(() => ({
+
+    // Map through posts and create the required response
+    const result: any[] = [];
+
+    posts.forEach((post) => {
+      const postDate = post.createdAt.toISOString().split("T")[0]; // Get the date part (YYYY-MM-DD)
+
+      // Find if there's already an entry for the same day
+      let dayGroup = result.find((item) => item.created_at === postDate);
+
+      if (!dayGroup) {
+        // If no group for this day exists, create a new group
+        dayGroup = {
+          _id: post._id.toString(),
+          user_id: userId,
+          created_at: postDate, // Grouping by date
+          posts: [],
+        };
+        result.push(dayGroup);
+      }
+
+      // Add the post to the day group
+      dayGroup.posts.push({
         _id: post._id.toString(),
         content: post.content,
         posterName: `${post.author.firstName} ${post.author.lastName}`,
-        posterAva: post.author.avatar
-          ? post.author.avatar
-          : "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg", // Kiểm tra avatar
-        like_at: new Date(post.likes.createdAt) ?? new Date(),
-      })),
-    }));
+        posterAva:
+          post.author.avatar ||
+          "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg",
+        like_at: new Date(post.likes[0]?.createdAt), // Assuming the first like timestamp
+      });
+    });
 
     return result;
   } catch (error) {

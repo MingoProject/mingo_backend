@@ -1,5 +1,5 @@
 import { PostResponseDTO, PostYouLikeDTO } from "@/dtos/PostDTO";
-import { getLikedPosts } from "@/lib/actions/post.action";
+import { getLikedPosts, getSavedPosts } from "@/lib/actions/post.action";
 import corsMiddleware from "@/middleware/auth-middleware";
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -18,11 +18,8 @@ export default async function handler(
         }
 
         // Gọi hàm lấy danh sách bài viết đã thích
-        const likedPosts = await getLikedPosts(userId);
-        console.log(
-          "Posts found:",
-          likedPosts.map((item) => console.log(item.posts))
-        );
+        const likedPosts = await getSavedPosts(userId);
+        console.log("Posts found:", userId);
 
         res.status(200).json(likedPosts);
       } catch (error: any) {
