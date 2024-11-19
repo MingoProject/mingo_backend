@@ -240,46 +240,6 @@ export const getAuthorByPostId = async (
   }
 };
 
-export async function getListLike(userId: string): Promise<PostResponseDTO[]> {
-  try {
-    await connectToDatabase();
-
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    // Tìm tất cả các bài viết mà userId đã like
-    const likedPosts = await Post.find({ likes: userId });
-
-    // Kiểm tra nếu không có bài viết nào được tìm thấy
-    if (!likedPosts.length) {
-      return [];
-    }
-
-    // Chuyển đổi danh sách bài viết thành dạng `PostResponseDTO`
-    const result: PostResponseDTO[] = likedPosts.map((post) => ({
-      _id: post._id.toString(),
-      content: post.content,
-      media: post.media,
-      url: post.url,
-      createdAt: post.createdAt,
-      author: post.author,
-      location: post.location,
-      privacy: post.privacy,
-      shares: post.shares,
-      likes: post.likes,
-      comments: post.comments,
-      likedIds: post.likedIds,
-      flag: post.flag,
-      createBy: post.createBy,
-    }));
-
-    return result;
-  } catch (error) {
-    console.error("Error fetching liked posts: ", error);
-    throw new Error("Error fetching liked posts: " + error);
-  }
-}
 export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
   try {
     console.log("getLikedPosts called with userId:", userId);
@@ -310,6 +270,97 @@ export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
           ? post.author.avatar
           : "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg", // Kiểm tra avatar
         like_at: post.likes.createdAt ?? new Date(),
+      })),
+    }));
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching liked posts: ", error);
+    throw new Error("Error fetching liked posts: " + error);
+  }
+}
+
+export async function savePost(
+  postId: String | undefined,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+    const post = await Post.findById(postId);
+    const user = await User.findById(userId);
+
+    if (!post) {
+      throw new Error(`Post with ID ${postId} does not exist.`);
+    }
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} does not exist.`);
+    }
+
+    await post.saves.addToSet(userId);
+
+    await post.save();
+
+    return { message: `Saved post ${postId}` };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function unSavePost(
+  postId: string | undefined,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+    const post = await Post.findById(postId);
+    const user = await User.findById(userId);
+    if (!post || !user) {
+      throw new Error("Your required content does not exist!");
+    }
+
+    await post.saves.pull(userId);
+
+    await post.save();
+
+    return { message: `Unsave post ${postId}` };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
+  try {
+    console.log("getLikedPosts called with userId:", userId);
+    await connectToDatabase();
+    console.log("Database connected.");
+
+    if (!userId) {
+      throw new Error("User  ID is required");
+    }
+
+    const posts = await Post.find({ saves: userId })
+      .populate("author", "firstName lastName avatar")
+      .select("content createdAt author likes");
+
+    if (!posts.length) {
+      return [];
+    }
+    const result: PostYouLikeDTO[] = posts.map((post) => ({
+      _id: post._id.toString(),
+      user_id: userId,
+      post_id: post._id.toString(),
+      created_at: new Date(post.createAt) ?? new Date(),
+      posts: (post.saves || []).map(() => ({
+        _id: post._id.toString(),
+        content: post.content,
+        posterName: `${post.author.firstName} ${post.author.lastName}`,
+        posterAva: post.author.avatar
+          ? post.author.avatar
+          : "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg", // Kiểm tra avatar
+        like_at: new Date(post.likes.createdAt) ?? new Date(),
       })),
     }));
 
