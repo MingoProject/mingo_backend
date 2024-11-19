@@ -2,11 +2,12 @@
 import { connectToDatabase } from "../mongoose";
 import Post from "@/database/post.model";
 import { CommentResponseDTO } from "@/dtos/CommentDTO";
-import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
+import { PostCreateDTO, PostResponseDTO, PostYouLikeDTO } from "@/dtos/PostDTO";
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
 import Comment from "@/database/comment.model";
 import User from "@/database/user.model";
+import { console } from "inspector";
 
 export async function getAllPosts() {
   try {
@@ -271,6 +272,45 @@ export async function getListLike(userId: string): Promise<PostResponseDTO[]> {
       likedIds: post.likedIds,
       flag: post.flag,
       createBy: post.createBy,
+    }));
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching liked posts: ", error);
+    throw new Error("Error fetching liked posts: " + error);
+  }
+}
+export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
+  try {
+    console.log("getLikedPosts called with userId:", userId);
+    await connectToDatabase();
+    console.log("Database connected.");
+
+    if (!userId) {
+      throw new Error("User  ID is required");
+    }
+
+    const posts = await Post.find({ likes: userId })
+      .populate("author", "firstName lastName avatar")
+      .select("content createdAt author likes");
+
+    if (!posts.length) {
+      return [];
+    }
+    const result: PostYouLikeDTO[] = posts.map((post) => ({
+      _id: post._id.toString(),
+      user_id: userId,
+      post_id: post._id.toString(),
+      created_at: post.createAt ?? new Date(),
+      posts: (post.likes || []).map(() => ({
+        _id: post._id.toString(),
+        content: post.content,
+        posterName: `${post.author.firstName} ${post.author.lastName}`,
+        posterAva: post.author.avatar
+          ? post.author.avatar
+          : "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg", // Kiểm tra avatar
+        like_at: post.likes.createdAt ?? new Date(),
+      })),
     }));
 
     return result;

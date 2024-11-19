@@ -29,3 +29,17 @@ export interface PostResponseDTO {
   likedIds: Schema.Types.ObjectId[];
   flag: boolean;
 }
+
+export interface PostYouLikeDTO {
+  _id: string;
+  user_id: string;
+  post_id: string;
+  created_at: Date;
+  posts: {
+    _id: string;
+    content: string;
+    posterAva: string;
+    posterName: string;
+    like_at: Date;
+  }[];
+}
