@@ -2,7 +2,7 @@
 import { connectToDatabase } from "../mongoose";
 import Post from "@/database/post.model";
 import { CommentResponseDTO } from "@/dtos/CommentDTO";
-import { PostCreateDTO, PostResponseDTO } from "@/dtos/PostDTO";
+import { PostCreateDTO, PostResponseDTO, PostYouLikeDTO } from "@/dtos/PostDTO";
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
 import Comment from "@/database/comment.model";
@@ -10,6 +10,7 @@ import User from "@/database/user.model";
 import { isUserExists } from "./user.action";
 import { MediaResponseDTO } from "@/dtos/MediaDTO";
 import Media from "@/database/media.model";
+import { console } from "inspector";
 
 export async function getAllPosts() {
   try {
@@ -47,6 +48,7 @@ export async function createPost(
       },
       shares: [],
       likes: [],
+      savedByUsers: [],
       comments: [],
       likedIds: [],
       flag: true,
@@ -257,6 +259,7 @@ export const getAuthorByPostId = async (
   }
 };
 
+
 export const getMediasByPostId = async (
   postId: string
 ): Promise<MediaResponseDTO[]> => {
@@ -297,3 +300,172 @@ export const getMediasByPostId = async (
     throw new Error("Error fetching media: " + error.message);
   }
 };
+export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
+  try {
+    console.log("getLikedPosts called with userId:", userId);
+    await connectToDatabase();
+    console.log("Database connected.");
+
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    // Find posts that the user has liked
+    const posts = await Post.find({ likes: userId })
+      .populate("author", "firstName lastName avatar") // Populate author information
+      .select("content createdAt author likes");
+
+    if (!posts.length) {
+      return [];
+    }
+
+    // Map through posts and create the required response
+    const result: any[] = [];
+
+    posts.forEach((post) => {
+      const postDate = post.createdAt.toISOString().split("T")[0]; // Get the date part (YYYY-MM-DD)
+
+      // Find if there's already an entry for the same day
+      let dayGroup = result.find((item) => item.created_at === postDate);
+
+      if (!dayGroup) {
+        // If no group for this day exists, create a new group
+        dayGroup = {
+          _id: post._id.toString(),
+          user_id: userId,
+          created_at: postDate, // Grouping by date
+          posts: [],
+        };
+        result.push(dayGroup);
+      }
+
+      // Add the post to the day group
+      dayGroup.posts.push({
+        _id: post._id.toString(),
+        content: post.content,
+        posterName: `${post.author.firstName} ${post.author.lastName}`,
+        posterAva:
+          post.author.avatar ||
+          "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg",
+        like_at: new Date(post.likes[0]?.createdAt), // Assuming the first like timestamp
+      });
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching liked posts: ", error);
+    throw new Error("Error fetching liked posts: " + error);
+  }
+}
+
+export async function savePost(
+  postId: String | undefined,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+    const post = await Post.findById(postId);
+    const user = await User.findById(userId);
+
+    if (!post) {
+      throw new Error(`Post with ID ${postId} does not exist.`);
+    }
+
+    if (!user) {
+      throw new Error(`User with ID ${userId} does not exist.`);
+    }
+
+    await Post.updateOne(
+      { _id: postId },
+      { $addToSet: { savedByUsers: userId } } // Thêm userId vào mảng saves nếu chưa có
+    );
+
+    await post.save();
+
+    return { message: `Saved post ${postId}` };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function unSavePost(
+  postId: string | undefined,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+    const post = await Post.findById(postId);
+    const user = await User.findById(userId);
+    if (!post || !user) {
+      throw new Error("Your required content does not exist!");
+    }
+
+    await post.savedByUsers.pull(userId);
+
+    await post.save();
+
+    return { message: `Unsave post ${postId}` };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
+  try {
+    console.log("getLikedPosts called with userId:", userId);
+    await connectToDatabase();
+    console.log("Database connected.");
+
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    // Find posts that the user has liked
+    const posts = await Post.find({ savedByUsers: userId })
+      .populate("author", "firstName lastName avatar") // Populate author information
+      .select("content createdAt author likes");
+
+    if (!posts.length) {
+      return [];
+    }
+
+    // Map through posts and create the required response
+    const result: any[] = [];
+
+    posts.forEach((post) => {
+      const postDate = post.createdAt.toISOString().split("T")[0]; // Get the date part (YYYY-MM-DD)
+
+      // Find if there's already an entry for the same day
+      let dayGroup = result.find((item) => item.created_at === postDate);
+
+      if (!dayGroup) {
+        // If no group for this day exists, create a new group
+        dayGroup = {
+          _id: post._id.toString(),
+          user_id: userId,
+          created_at: postDate, // Grouping by date
+          posts: [],
+        };
+        result.push(dayGroup);
+      }
+
+      // Add the post to the day group
+      dayGroup.posts.push({
+        _id: post._id.toString(),
+        content: post.content,
+        posterName: `${post.author.firstName} ${post.author.lastName}`,
+        posterAva:
+          post.author.avatar ||
+          "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg",
+        like_at: new Date(post.likes[0]?.createdAt), // Assuming the first like timestamp
+      });
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching liked posts: ", error);
+    throw new Error("Error fetching liked posts: " + error);
+  }
+}

@@ -9,6 +9,7 @@ export interface IPost extends Document, IAudit {
   author: Schema.Types.ObjectId;
   shares: Schema.Types.ObjectId[];
   likes: Schema.Types.ObjectId[];
+  savedByUsers: Schema.Types.ObjectId[];
   comments: Schema.Types.ObjectId[];
   location?: string;
   tags?: Schema.Types.ObjectId[];
@@ -28,6 +29,7 @@ const PostSchema = new Schema<IPost>({
   author: { type: Schema.Types.ObjectId, ref: "User", required: true },
   shares: [{ type: Schema.Types.ObjectId, ref: "User" }],
   likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  savedByUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
   comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
   location: { type: String },
   tags: [{ type: Schema.Types.ObjectId, ref: "User" }],
