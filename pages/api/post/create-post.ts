@@ -15,7 +15,7 @@ export default async function handler(
 
         const newPost: PostResponseDTO = await createPost(params, req.user?.id);
 
-        return res.status(201).json(newPost);
+        return res.status(200).json(newPost);
       } catch (error) {
         console.error(error);
 
