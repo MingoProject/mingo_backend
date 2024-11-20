@@ -13,6 +13,8 @@ import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
 import bcrypt from "bcrypt";
 import mongoose, { Schema } from "mongoose";
+import { PostResponseDTO } from "@/dtos/PostDTO";
+import Post from "@/database/post.model";
 // import Relation from "@/database/relation.model";
 const saltRounds = 10;
 
@@ -108,9 +110,8 @@ export async function createAdmin(
   }
 }
 
-export async function isUserExists(id: string) {
+export async function isUserExists(id: string | undefined) {
   try {
-    connectToDatabase();
     const user = await User.findById(id);
     if (!user) {
       throw new Error("Your require user is not exist!");
@@ -241,6 +242,53 @@ export async function getMyProfile(id: String | undefined) {
     return myProfile;
   } catch (error) {
     console.log(error);
+    throw error;
+  }
+}
+
+export async function getMyPosts(id: String | undefined) {
+  try {
+    connectToDatabase();
+    const user = await User.findById(id)
+      .populate({
+        path: "postIds",
+        model: Post,
+      })
+      .select("postIds"); // Only select the 'postIds' field
+
+    if (!user) {
+      console.log(`Cannot get ${id} posts now`);
+      throw new Error(`Cannot get ${id} posts now`);
+    }
+
+    return user.postIds; // Return only the postIds array
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function getMyFriends(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    // Tìm user và chỉ lấy friendIds
+    const user = await User.findById(id).select("friendIds");
+
+    if (!user || !Array.isArray(user.friendIds)) {
+      console.log(`Cannot get ${id} friends now`);
+      throw new Error(`Cannot get ${id} friends now`);
+    }
+
+    // Truy vấn danh sách bạn bè dựa trên friendIds
+    const friends = await User.find({
+      _id: { $in: user.friendIds }, // Lấy danh sách bạn bè theo ObjectId
+    });
+
+    console.log(friends); // Kiểm tra danh sách bạn bè
+    return friends;
+  } catch (error) {
+    console.error(error);
     throw error;
   }
 }

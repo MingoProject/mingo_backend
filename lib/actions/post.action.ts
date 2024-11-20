@@ -7,6 +7,9 @@ import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
 import Comment from "@/database/comment.model";
 import User from "@/database/user.model";
+import { isUserExists } from "./user.action";
+import { MediaResponseDTO } from "@/dtos/MediaDTO";
+import Media from "@/database/media.model";
 
 export async function getAllPosts() {
   try {
@@ -27,9 +30,13 @@ export async function createPost(
   try {
     await connectToDatabase();
 
+    // Chuyển đổi media ID từ string[] thành ObjectId[]
+    const mediaIds =
+      params.media?.map((id) => new mongoose.Types.ObjectId(id)) || [];
+
     const postData = {
       content: params.content,
-      media: params.media,
+      media: mediaIds, // Sử dụng ObjectId[] thay vì string[]
       url: params.url,
       createdAt: new Date(),
       author: createBy ? createBy : new mongoose.Types.ObjectId(),
@@ -46,7 +53,17 @@ export async function createPost(
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     };
 
+    // Tạo bài viết mới
     const newPost = await Post.create(postData);
+
+    // Nếu người dùng tạo bài viết, cập nhật danh sách postIds của họ
+    if (createBy) {
+      await User.findByIdAndUpdate(
+        createBy,
+        { $addToSet: { postIds: newPost._id } },
+        { new: true }
+      );
+    }
 
     return newPost as PostResponseDTO;
   } catch (error) {
@@ -54,7 +71,6 @@ export async function createPost(
     throw error;
   }
 }
-
 export async function deletePost(postId: string) {
   try {
     connectToDatabase();
@@ -226,8 +242,10 @@ export const getAuthorByPostId = async (
       attendDate: author.attendDate,
       flag: author.flag,
       friendIds: author.friendIds,
+      followingIds: author.followingIds,
       bestFriendIds: author.bestFriendIds,
       blockedIds: author.blockedIds,
+      postIds: author.postIds,
       createAt: author.createdAt,
       createBy: author.createBy,
     };
@@ -236,5 +254,46 @@ export const getAuthorByPostId = async (
   } catch (error: any) {
     console.error("Error fetching author: ", error);
     throw new Error("Error fetching author: " + error.message);
+  }
+};
+
+export const getMediasByPostId = async (
+  postId: string
+): Promise<MediaResponseDTO[]> => {
+  try {
+    // Kết nối cơ sở dữ liệu
+    await connectToDatabase();
+
+    // Tìm bài viết theo ID và populate trường media
+    const post = await Post.findById(postId).populate({
+      path: "media",
+      model: Media,
+    });
+
+    // Nếu bài viết không tồn tại, trả về lỗi
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    // Map dữ liệu từ media để tạo danh sách MediaResponseDTO
+    const medias: MediaResponseDTO[] = post.media.map((media: any) => {
+      return {
+        _id: media._id.toString(),
+        url: media.url,
+        type: media.type,
+        caption: media.caption,
+        createdAt: media.createdAt,
+        author: media.author,
+        likes: media.likes || [],
+        comments: media.comments || [],
+        shares: media.shares || [],
+      };
+    });
+
+    return medias;
+  } catch (error: any) {
+    // Xử lý lỗi
+    console.error("Error fetching media:", error.message);
+    throw new Error("Error fetching media: " + error.message);
   }
 };

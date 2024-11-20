@@ -2,7 +2,7 @@ import { Schema } from "mongoose";
 
 export interface PostCreateDTO {
   content: string;
-  media?: Schema.Types.ObjectId[];
+  media?: string[];
   url?: string;
   location?: string;
   privacy?: {
