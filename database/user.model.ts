@@ -1,5 +1,6 @@
 import { Schema, models, model, Document } from "mongoose";
 import { IAudit, AuditSchema } from "./audit.model";
+
 export interface IUser extends Document, IAudit {
   firstName: string;
   lastName: string;
@@ -25,6 +26,7 @@ export interface IUser extends Document, IAudit {
   followingIds: Schema.Types.ObjectId[];
   bestFriendIds: Schema.Types.ObjectId[];
   blockedIds: Schema.Types.ObjectId[];
+  postIds: Schema.Types.ObjectId[];
 }
 
 const UserSchema = new Schema<IUser>({
@@ -48,10 +50,11 @@ const UserSchema = new Schema<IUser>({
   birthDay: { type: Date, required: false },
   attendDate: { type: Date, required: true },
   flag: { type: Boolean, required: true, default: true },
-  friendIds: [{ type: [Schema.Types.ObjectId], ref: "User" }],
-  followingIds: [{ type: [Schema.Types.ObjectId], ref: "User" }],
-  bestFriendIds: [{ type: [Schema.Types.ObjectId], ref: "User" }],
-  blockedIds: [{ type: [Schema.Types.ObjectId], ref: "User" }],
+  friendIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  followingIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  bestFriendIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  blockedIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  postIds: [{ type: Schema.Types.ObjectId, ref: "Post" }],
 });
 
 UserSchema.add(AuditSchema);

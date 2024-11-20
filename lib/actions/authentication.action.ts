@@ -1,4 +1,4 @@
-import OTP from "@/database/opt.model";
+import OTP from "@/database/otp.model";
 import { connectToDatabase } from "../mongoose";
 import jwt from "jsonwebtoken";
 

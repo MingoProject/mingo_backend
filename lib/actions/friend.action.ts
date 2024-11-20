@@ -72,6 +72,53 @@ export async function requestAddBFF(param: FriendRequestDTO) {
   }
 }
 
+export async function unFriend(param: FriendRequestDTO) {
+  try {
+    await connectToDatabase();
+
+    // Sắp xếp ID của hai người dùng để đảm bảo tính nhất quán trong lưu trữ
+    const [stUser, ndUser] = [param.sender, param.receiver].sort();
+
+    // Kiểm tra xem quan hệ bạn bè có tồn tại không
+    const existedFriendRelation = await Relation.findOne({
+      stUser: stUser,
+      ndUser: ndUser,
+      relation: "friend",
+    });
+
+    if (!existedFriendRelation) {
+      return { message: "You are not friends!" };
+    }
+
+    // Xóa quan hệ bạn bè
+    await Relation.deleteOne({ _id: existedFriendRelation._id });
+
+    // Có thể cập nhật thêm danh sách bạn bè của từng người nếu cần
+    await User.updateOne(
+      { _id: param.sender },
+      { $pull: { friendIds: param.receiver } }
+    );
+    await User.updateOne(
+      { _id: param.receiver },
+      { $pull: { friendIds: param.sender } }
+    );
+
+    await User.updateOne(
+      { _id: param.sender },
+      { $pull: { bestFriendIds: param.receiver } }
+    );
+    await User.updateOne(
+      { _id: param.receiver },
+      { $pull: { bestFriendIds: param.sender } }
+    );
+
+    return { message: `Successfully unfriended ${param.receiver}.` };
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to unfriend. Please try again.");
+  }
+}
+
 export async function block(param: FriendRequestDTO) {
   try {
     await connectToDatabase();
@@ -162,46 +209,6 @@ export async function acceptBFFRequest(param: FriendRequestDTO) {
     await ndUser.save();
 
     return { message: "Accepted" };
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-}
-
-export async function unFriend(param: FriendRequestDTO) {
-  try {
-    await connectToDatabase();
-    const stUser = await isUserExists(param.sender);
-    const ndUser = await isUserExists(param.receiver);
-    const [stUserId, ndUserId] = [param.sender, param.receiver].sort();
-    await Relation.findOneAndDelete({
-      stUser: stUserId,
-      ndUser: ndUserId,
-      relation: "friend",
-    });
-    await Relation.findOneAndDelete({
-      stUser: stUserId,
-      ndUser: ndUserId,
-      relation: "bff",
-    });
-    if (stUser && ndUser) {
-      stUser.friendIds = stUser.friendIds.filter(
-        (id: string) => id.toString() !== ndUser._id.toString()
-      );
-      stUser.bestFriendIds = stUser.bestFriendIds.filter(
-        (id: string) => id.toString() !== ndUser._id.toString()
-      );
-
-      ndUser.friendIds = ndUser.friendIds.filter(
-        (id: string) => id.toString() !== stUser._id.toString()
-      );
-      ndUser.bestFriendIds = ndUser.bestFriendIds.filter(
-        (id: string) => id.toString() !== stUser._id.toString()
-      );
-      await stUser.save();
-      await ndUser.save();
-      return { message: "Unfriend successfully!" };
-    }
   } catch (error) {
     console.log(error);
     throw error;
