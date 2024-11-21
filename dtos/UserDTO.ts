@@ -42,8 +42,10 @@ export interface UserResponseDTO {
   attendDate: Date;
   flag: boolean;
   friendIds: Schema.Types.ObjectId[];
+  followingIds: Schema.Types.ObjectId[];
   bestFriendIds: Schema.Types.ObjectId[];
   blockedIds: Schema.Types.ObjectId[];
+  postIds: Schema.Types.ObjectId[];
   createAt: Date;
   createBy: Schema.Types.ObjectId;
 }
