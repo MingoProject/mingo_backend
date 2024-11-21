@@ -20,6 +20,7 @@ export interface PostResponseDTO {
   author: Schema.Types.ObjectId;
   shares: Schema.Types.ObjectId[];
   likes: Schema.Types.ObjectId[];
+  savedByUsers: Schema.Types.ObjectId[];
   comments: Schema.Types.ObjectId[];
   location?: string;
   privacy: {
@@ -28,4 +29,18 @@ export interface PostResponseDTO {
   };
   likedIds: Schema.Types.ObjectId[];
   flag: boolean;
+}
+
+export interface PostYouLikeDTO {
+  _id: string;
+  user_id: string;
+  post_id: string;
+  created_at: Date;
+  posts: Array<{
+    _id: string;
+    content: string;
+    posterName: string;
+    posterAva: string;
+    like_at: Date;
+  }>;
 }

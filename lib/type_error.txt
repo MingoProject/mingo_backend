@@ -1,0 +1,25 @@
+1. Mã lỗi thành công (2xx)
+200 OK: Yêu cầu thành công và phản hồi đã được trả về.
+201 Created: Yêu cầu thành công và một tài nguyên mới đã được tạo.
+202 Accepted: Yêu cầu đã được chấp nhận để xử lý, nhưng chưa hoàn tất.
+204 No Content: Yêu cầu thành công nhưng không có nội dung trả về.
+
+2. Mã lỗi chuyển hướng (3xx)
+301 Moved Permanently: Tài nguyên đã được chuyển đến URL mới.
+302 Found: Tài nguyên tạm thời được chuyển đến URL khác.
+304 Not Modified: Tài nguyên chưa thay đổi kể từ lần truy cập cuối, có thể sử dụng dữ liệu trong bộ nhớ cache.
+
+3. Mã lỗi phía client (4xx)
+400 Bad Request: Yêu cầu không hợp lệ, thường do dữ liệu gửi đi bị sai.
+401 Unauthorized: Yêu cầu chưa được xác thực hoặc thông tin xác thực không hợp lệ.
+403 Forbidden: Yêu cầu hợp lệ nhưng bị từ chối truy cập.
+404 Not Found: Không tìm thấy tài nguyên yêu cầu.
+405 Method Not Allowed: Phương thức yêu cầu không được phép.
+
+4. Mã lỗi phía server (5xx)
+500 Internal Server Error: Lỗi phía server, không thể xử lý yêu cầu.
+501 Not Implemented: Server không hỗ trợ phương thức yêu cầu.
+502 Bad Gateway: Lỗi từ cổng trung gian (gateway) hoặc proxy khi nhận phản hồi từ server khác.
+503 Service Unavailable: Server đang tạm thời quá tải hoặc bảo trì.
+504 Gateway Timeout: Cổng trung gian hết thời gian chờ phản hồi từ server khác.
+505 HTTP Version Not Supported: Phiên bản HTTP không được hỗ trợ bởi server.
