@@ -259,7 +259,6 @@ export const getAuthorByPostId = async (
   }
 };
 
-
 export const getMediasByPostId = async (
   postId: string
 ): Promise<MediaResponseDTO[]> => {
@@ -469,3 +468,56 @@ export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
     throw new Error("Error fetching liked posts: " + error);
   }
 }
+
+export const getLikesByPostId = async (
+  postId: string
+): Promise<UserResponseDTO[]> => {
+  try {
+    await connectToDatabase();
+
+    const post = await Post.findById(postId).populate({
+      path: "likes",
+      model: User,
+    });
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    const users: UserResponseDTO[] = post.likes.map((user: any) => {
+      return {
+        _id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        nickName: user.nickName,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        role: user.roles,
+        avatar: user.avatar,
+        background: user.background,
+        gender: user.gender,
+        address: user.address,
+        job: user.job,
+        hobbies: user.hobbies,
+        bio: user.bio,
+        point: 0,
+        relationShip: user.relationShip,
+        birthDay: user.birthDay,
+        attendDate: user.attendDate,
+        flag: user.flag,
+        friendIds: user.friendIds,
+        followingIds: user.followingIds,
+        bestFriendIds: user.bestFriendIds,
+        blockedIds: user.blockedIds,
+        postIds: user.postIds,
+        createAt: user.createdAt,
+        createBy: user.createBy,
+      };
+    });
+
+    return users;
+  } catch (error: any) {
+    console.error("Error fetching media:", error.message);
+    throw new Error("Error fetching media: " + error.message);
+  }
+};
