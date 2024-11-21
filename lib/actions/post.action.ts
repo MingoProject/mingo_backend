@@ -299,7 +299,6 @@ export const getMediasByPostId = async (
     throw new Error("Error fetching media: " + error.message);
   }
 };
-
 export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
   try {
     console.log("getLikedPosts called with userId:", userId);
