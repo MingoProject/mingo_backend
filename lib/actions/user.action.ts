@@ -15,6 +15,7 @@ import bcrypt from "bcrypt";
 import mongoose, { Schema } from "mongoose";
 import { PostResponseDTO } from "@/dtos/PostDTO";
 import Post from "@/database/post.model";
+import cloudinary from "@/cloudinary";
 // import Relation from "@/database/relation.model";
 const saltRounds = 10;
 
@@ -368,6 +369,34 @@ export async function deleteUser(userId: string) {
     };
   } catch (error) {
     console.error(error);
+    throw error;
+  }
+}
+
+export async function uploadAvatar(
+  userId: Schema.Types.ObjectId | undefined,
+  url: string,
+  publicId: string
+) {
+  try {
+    connectToDatabase();
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not exist");
+    }
+
+    if (user.avatarPublicId) {
+      await cloudinary.uploader.destroy(user.avatarPublicId);
+      console.log("Previous avatar removed from Cloudinary");
+    }
+
+    user.avatar = url;
+    user.avatarPublicId = publicId;
+    await user.save();
+
+    return { message: "Upload avatar successfully" };
+  } catch (error) {
+    console.log(error);
     throw error;
   }
 }

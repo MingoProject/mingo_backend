@@ -53,8 +53,8 @@ export function authorizeRole(roles: string[]) {
   };
 }
 const cors = Cors({
-  methods: ["GET", "POST", "HEAD"],
-  origin: "*", // Cho phép tất cả domain hoặc giới hạn bằng cách thay bằng domain cụ thể
+  methods: ["GET", "POST", "PATCH", "HEAD", "DELETE"], // Thêm PATCH vào đây
+  origin: "*", // Có thể thay thế * bằng một domain cụ thể nếu cần
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

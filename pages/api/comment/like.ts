@@ -1,32 +1,25 @@
-// pages/api/comments/create.ts
-import { createComment } from "@/lib/actions/comment.action";
-import { CreateCommentDTO, CommentResponseDTO } from "@/dtos/CommentDTO";
 import type { NextApiRequest, NextApiResponse } from "next";
 import corsMiddleware, {
   authenticateToken,
 } from "@/middleware/auth-middleware";
+import { likeComment } from "@/lib/actions/comment.action";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  corsMiddleware(req, res, async () => {
+  await corsMiddleware(req, res, async () => {
     authenticateToken(req, res, async () => {
       if (req.method === "POST") {
         try {
-          const { postId } = req.query;
-          if (typeof postId !== "string") {
-            return res.status(400).json({ message: "Invalid postId" });
+          const { commentId } = req.query;
+          if (!commentId) {
+            return res.status(400).json({ message: "Comment ID is required" });
           }
-          const params: CreateCommentDTO = req.body;
 
-          const newComment: CommentResponseDTO = await createComment(
-            params,
-            req.user?.id,
-            postId
-          );
+          const result = await likeComment(commentId as string, req.user?.id);
 
-          return res.status(201).json(newComment);
+          return res.status(201).json(result);
         } catch (error) {
           console.error(error);
 
