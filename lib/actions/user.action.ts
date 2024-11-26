@@ -294,64 +294,6 @@ export async function getMyFriends(id: String | undefined) {
   }
 }
 
-export async function updateAvatar(
-  userId: Schema.Types.ObjectId | undefined,
-  params: UpdateAvatarDTO
-) {
-  try {
-    await connectToDatabase();
-
-    const existingUser = await User.findById(userId);
-
-    if (!existingUser) {
-      throw new Error("User not found!");
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {
-        avatar: params.avatar,
-        avatarPublicId: params.avatarPublicId,
-      },
-      { new: true }
-    );
-
-    return { status: true, updatedAvatar: updatedUser?.avatar };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-export async function updateBackground(
-  userId: Schema.Types.ObjectId | undefined,
-  params: UpdateBackgroundDTO
-) {
-  try {
-    await connectToDatabase();
-
-    const existingUser = await User.findById(userId);
-
-    if (!existingUser) {
-      throw new Error("User not found!");
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {
-        background: params.background,
-        backgroundPublicId: params.backgroundPublicId,
-      },
-      { new: true }
-    );
-
-    return { status: true, updatedBackground: updatedUser?.background };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
 export async function deleteUser(userId: string) {
   try {
     connectToDatabase();
@@ -392,6 +334,34 @@ export async function uploadAvatar(
 
     user.avatar = url;
     user.avatarPublicId = publicId;
+    await user.save();
+
+    return { message: "Upload avatar successfully" };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function uploadBackground(
+  userId: Schema.Types.ObjectId | undefined,
+  url: string,
+  publicId: string
+) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not exist");
+    }
+
+    if (user.backgroundPublicId) {
+      await cloudinary.uploader.destroy(user.backgroundPublicId);
+      console.log("Previous background removed from Cloudinary");
+    }
+
+    user.background = url;
+    user.backgroundPublicId = publicId;
+
     await user.save();
 
     return { message: "Upload avatar successfully" };

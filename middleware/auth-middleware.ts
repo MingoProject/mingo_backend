@@ -53,14 +53,12 @@ export function authorizeRole(roles: string[]) {
   };
 }
 const cors = Cors({
-  methods: ["GET", "POST", "PATCH", "HEAD", "DELETE"], // Thêm PATCH vào đây
-  origin: "*", // Có thể thay thế * bằng một domain cụ thể nếu cần
+  methods: ["GET", "POST", "PATCH", "HEAD", "DELETE"],
+  origin: "*",
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function runMiddleware(req: NextApiRequest, res: NextApiResponse, fn: any) {
   return new Promise((resolve, reject) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fn(req, res, (result: any) => {
       if (result instanceof Error) {
         return reject(result);

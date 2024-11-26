@@ -31,13 +31,11 @@ export async function createPost(
   try {
     await connectToDatabase();
 
-    const mediaIds =
-      params.media?.map((id) => new mongoose.Types.ObjectId(id)) || [];
-
     const postData = {
       content: params.content,
-      media: mediaIds,
+      media: params.media,
       url: params.url,
+      createAt: new Date(),
       createdAt: new Date(),
       author: createBy ? createBy : new mongoose.Types.ObjectId(),
       location: params.location,
