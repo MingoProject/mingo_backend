@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { uploadBackground } from "@/lib/actions/user.action";
 import corsMiddleware, {
   authenticateToken,
 } from "@/middleware/auth-middleware";
 import cloudinary from "@/cloudinary";
 import { IncomingForm } from "formidable";
-import { createMedia } from "@/lib/actions/media.action";
 
 export const config = {
   api: {
@@ -24,35 +24,26 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             return res.status(500).json({ error: err.message });
           }
 
-          const { caption } = fields;
-          const captionString = Array.isArray(caption) ? caption[0] : caption;
           if (files.file) {
             try {
               const file = Array.isArray(files.file)
                 ? files.file[0]
                 : files.file;
-
               const result = await cloudinary.uploader.upload(file.filepath, {
-                folder: "Media",
-                resource_type: "auto",
+                folder: "Avatar",
               });
 
-              const data = {
-                url: result.secure_url,
-                type: result.resource_type,
-                caption: captionString || "",
-              };
-
-              const media = await createMedia(data, req.user?.id);
-
-              return res.status(200).json({
-                status: true,
-                message: "Media uploaded successfully!",
-                media,
-              });
+              await uploadBackground(
+                req.user?.id,
+                result.secure_url,
+                result.public_id
+              );
+              return res
+                .status(200)
+                .json({ status: true, message: "Update successfully!" });
             } catch (error) {
               console.error("Cloudinary upload error:", error);
-              return res.status(500).json({ error: "Failed to upload media" });
+              return res.status(500).json({ error: "Failed to upload image" });
             }
           } else {
             return res.status(400).json({ error: "No file uploaded" });
@@ -64,4 +55,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     });
   });
 };
+
 export default handler;
