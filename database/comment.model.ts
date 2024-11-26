@@ -6,6 +6,7 @@ interface IComment extends Document, IAudit {
   content: string;
   createdAt: Date;
   replies?: mongoose.Schema.Types.ObjectId[];
+  likes: Schema.Types.ObjectId[];
 }
 
 const CommentSchema = new Schema<IComment>({
@@ -13,6 +14,7 @@ const CommentSchema = new Schema<IComment>({
   content: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
+  likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
 });
 
 CommentSchema.add(AuditSchema);

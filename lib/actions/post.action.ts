@@ -31,13 +31,12 @@ export async function createPost(
   try {
     await connectToDatabase();
 
-    // Chuyển đổi media ID từ string[] thành ObjectId[]
     const mediaIds =
       params.media?.map((id) => new mongoose.Types.ObjectId(id)) || [];
 
     const postData = {
       content: params.content,
-      media: mediaIds, // Sử dụng ObjectId[] thay vì string[]
+      media: mediaIds,
       url: params.url,
       createdAt: new Date(),
       author: createBy ? createBy : new mongoose.Types.ObjectId(),
@@ -55,10 +54,8 @@ export async function createPost(
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     };
 
-    // Tạo bài viết mới
     const newPost = await Post.create(postData);
 
-    // Nếu người dùng tạo bài viết, cập nhật danh sách postIds của họ
     if (createBy) {
       await User.findByIdAndUpdate(
         createBy,
@@ -299,6 +296,7 @@ export const getMediasByPostId = async (
     throw new Error("Error fetching media: " + error.message);
   }
 };
+
 export async function getLikedPosts(userId: string): Promise<PostYouLikeDTO[]> {
   try {
     console.log("getLikedPosts called with userId:", userId);
@@ -434,23 +432,19 @@ export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
     const result: any[] = [];
 
     posts.forEach((post) => {
-      const postDate = post.createdAt.toISOString().split("T")[0]; // Get the date part (YYYY-MM-DD)
-
-      // Find if there's already an entry for the same day
+      const postDate = post.createdAt.toISOString().split("T")[0];
       let dayGroup = result.find((item) => item.created_at === postDate);
 
       if (!dayGroup) {
-        // If no group for this day exists, create a new group
         dayGroup = {
           _id: post._id.toString(),
           user_id: userId,
-          created_at: postDate, // Grouping by date
+          created_at: postDate,
           posts: [],
         };
         result.push(dayGroup);
       }
 
-      // Add the post to the day group
       dayGroup.posts.push({
         _id: post._id.toString(),
         content: post.content,
@@ -458,7 +452,7 @@ export async function getSavedPosts(userId: string): Promise<PostYouLikeDTO[]> {
         posterAva:
           post.author.avatar ||
           "https://i.pinimg.com/236x/3d/22/e2/3d22e2269593b9169e7d74fe222dbab0.jpg",
-        like_at: new Date(post.likes[0]?.createdAt), // Assuming the first like timestamp
+        like_at: new Date(post.likes[0]?.createdAt),
       });
     });
 
