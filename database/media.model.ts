@@ -5,11 +5,9 @@ interface IMedia extends Document, IAudit {
   url: string;
   type: string;
   caption?: string;
-  createdAt: Date;
   likes: mongoose.Schema.Types.ObjectId[];
   comments: mongoose.Schema.Types.ObjectId[];
   shares: mongoose.Schema.Types.ObjectId[];
-  author: mongoose.Schema.Types.ObjectId;
 }
 
 const MediaSchema = new Schema<IMedia>({
@@ -25,14 +23,9 @@ const MediaSchema = new Schema<IMedia>({
     type: String,
     default: "",
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
   shares: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-  author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 
 MediaSchema.add(AuditSchema);

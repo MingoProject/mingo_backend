@@ -2,17 +2,17 @@ import mongoose, { Schema } from "mongoose";
 
 export interface MediaCreateDTO {
   url: string;
-  type: "image" | "video";
+  type: string;
   caption?: string;
 }
 export interface MediaResponseDTO {
   _id: string;
   url: string;
-  type: "image" | "video";
+  type: string;
   caption?: string;
-  createdAt: Date;
+  createAt: Date;
   likes: Schema.Types.ObjectId[];
   comments: Schema.Types.ObjectId[];
   shares: Schema.Types.ObjectId[];
-  createdBy?: Schema.Types.ObjectId;
+  createBy?: Schema.Types.ObjectId;
 }
