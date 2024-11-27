@@ -58,9 +58,12 @@ export interface UpdateUserDTO {
   address: string;
   job: string;
   hobbies: string[];
-  bio: string;
   relationShip: string;
   birthDay: Date;
+}
+
+export interface UpdateUserBioDTO {
+  bio: string;
 }
 
 export interface UpdateAvatarDTO {

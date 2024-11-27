@@ -8,6 +8,7 @@ import {
   UserResponseDTO,
   UpdateAvatarDTO,
   UpdateBackgroundDTO,
+  UpdateUserBioDTO,
 } from "@/dtos/UserDTO";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
@@ -189,6 +190,34 @@ export async function findUser(
 export async function updateUser(
   userId: Schema.Types.ObjectId | undefined,
   params: UpdateUserDTO
+) {
+  try {
+    connectToDatabase();
+
+    const existingUser = await User.findById(userId);
+
+    if (!existingUser) {
+      throw new Error("User not found!");
+    }
+
+    const updatedUser: UserResponseDTO | null = await User.findByIdAndUpdate(
+      userId,
+      params,
+      {
+        new: true,
+      }
+    );
+
+    return { status: true, newProfile: updatedUser };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function updateUserBio(
+  userId: Schema.Types.ObjectId | undefined,
+  params: UpdateUserBioDTO
 ) {
   try {
     connectToDatabase();

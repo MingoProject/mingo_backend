@@ -40,7 +40,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               );
               return res
                 .status(200)
-                .json({ status: true, message: "Update successfully!" });
+                .json({
+                  status: true,
+                  message: "Update successfully!",
+                  result,
+                });
             } catch (error) {
               console.error("Cloudinary upload error:", error);
               return res.status(500).json({ error: "Failed to upload image" });
