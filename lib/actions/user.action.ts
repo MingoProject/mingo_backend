@@ -17,6 +17,7 @@ import mongoose, { Schema } from "mongoose";
 import { PostResponseDTO } from "@/dtos/PostDTO";
 import Post from "@/database/post.model";
 import cloudinary from "@/cloudinary";
+import Media from "@/database/media.model";
 // import Relation from "@/database/relation.model";
 const saltRounds = 10;
 
@@ -323,6 +324,78 @@ export async function getMyFriends(id: String | undefined) {
   }
 }
 
+export async function getMyBffs(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    // Tìm user và chỉ lấy friendIds
+    const user = await User.findById(id).select("bestFriendIds");
+
+    if (!user || !Array.isArray(user.bestFriendIds)) {
+      console.log(`Cannot get ${id} bestFriends now`);
+      throw new Error(`Cannot get ${id} bestFriends now`);
+    }
+
+    // Truy vấn danh sách bạn bè dựa trên bestFriendIds
+    const bestFriends = await User.find({
+      _id: { $in: user.bestFriendIds }, // Lấy danh sách bạn bè theo ObjectId
+    });
+
+    console.log(bestFriends); // Kiểm tra danh sách bạn bè
+    return bestFriends;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getMyFollowings(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    // Tìm user và chỉ lấy friendIds
+    const user = await User.findById(id).select("followingIds");
+
+    if (!user || !Array.isArray(user.followingIds)) {
+      console.log(`Cannot get ${id} followings now`);
+      throw new Error(`Cannot get ${id} followings now`);
+    }
+
+    // Truy vấn danh sách bạn bè dựa trên friendIds
+    const followings = await User.find({
+      _id: { $in: user.followingIds }, // Lấy danh sách bạn bè theo ObjectId
+    });
+
+    return followings;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getMyBlocks(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    const user = await User.findById(id).select("blockedIds");
+
+    if (!user || !Array.isArray(user.blockedIds)) {
+      console.log(`Cannot get ${id} blockeds now`);
+      throw new Error(`Cannot get ${id} blockeds now`);
+    }
+
+    const blockeds = await User.find({
+      _id: { $in: user.blockedIds },
+    });
+
+    console.log(blockeds);
+    return blockeds;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
 export async function deleteUser(userId: string) {
   try {
     connectToDatabase();
@@ -396,6 +469,46 @@ export async function uploadBackground(
     return { message: "Upload avatar successfully" };
   } catch (error) {
     console.log(error);
+    throw error;
+  }
+}
+
+export async function getMyImages(id: String | undefined) {
+  try {
+    if (!id) {
+      throw new Error("User ID is required");
+    }
+
+    connectToDatabase();
+
+    const images = await Media.find({
+      type: "image",
+      createBy: id,
+    });
+
+    return images;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getMyVideos(id: String | undefined) {
+  try {
+    if (!id) {
+      throw new Error("User ID is required");
+    }
+
+    connectToDatabase();
+
+    const images = await Media.find({
+      type: "video",
+      createBy: id,
+    });
+
+    return images;
+  } catch (error) {
+    console.error(error);
     throw error;
   }
 }

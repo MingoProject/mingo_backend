@@ -43,6 +43,7 @@ export interface UserResponseDTO {
   flag: boolean;
   friendIds: Schema.Types.ObjectId[];
   followingIds: Schema.Types.ObjectId[];
+  followerIds: Schema.Types.ObjectId[];
   bestFriendIds: Schema.Types.ObjectId[];
   blockedIds: Schema.Types.ObjectId[];
   postIds: Schema.Types.ObjectId[];
