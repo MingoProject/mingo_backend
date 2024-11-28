@@ -24,6 +24,7 @@ export interface IUser extends Document, IAudit {
   flag: boolean;
   friendIds: Schema.Types.ObjectId[];
   followingIds: Schema.Types.ObjectId[];
+  followerIds: Schema.Types.ObjectId[];
   bestFriendIds: Schema.Types.ObjectId[];
   blockedIds: Schema.Types.ObjectId[];
   postIds: Schema.Types.ObjectId[];
@@ -52,6 +53,7 @@ const UserSchema = new Schema<IUser>({
   flag: { type: Boolean, required: true, default: true },
   friendIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   followingIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+  followerIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   bestFriendIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   blockedIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   postIds: [{ type: Schema.Types.ObjectId, ref: "Post" }],
