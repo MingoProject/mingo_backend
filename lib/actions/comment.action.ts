@@ -156,6 +156,7 @@ export async function getAuthorByCommentId(
       flag: author.flag,
       friendIds: author.friendIds,
       followingIds: author.followingIds,
+      followerIds: author.followerIds,
       bestFriendIds: author.bestFriendIds,
       blockedIds: author.blockedIds,
       postIds: author.postIds,

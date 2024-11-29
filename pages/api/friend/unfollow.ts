@@ -1,5 +1,5 @@
 import { FriendRequestDTO } from "@/dtos/FriendDTO";
-import { requestAddBFF } from "@/lib/actions/friend.action";
+import { unfollowUser } from "@/lib/actions/friend.action";
 import corsMiddleware from "@/middleware/auth-middleware";
 import { authenticateToken } from "@/middleware/auth-middleware";
 import { NextApiRequest, NextApiResponse } from "next";
@@ -13,7 +13,7 @@ export default async function handler(
       if (req.method === "POST") {
         try {
           const param: FriendRequestDTO = req.body;
-          const requestedRelation = await requestAddBFF(param);
+          const requestedRelation = await unfollowUser(param);
           return res.status(201).json(requestedRelation);
         } catch (error) {
           console.error(error);

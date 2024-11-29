@@ -1,13 +1,14 @@
 import { FriendRequestDTO } from "@/dtos/FriendDTO";
 import { acceptBFFRequest } from "@/lib/actions/friend.action";
-import cors, { authenticateToken } from "@/middleware/auth-middleware";
+import corsMiddleware from "@/middleware/auth-middleware";
+import { authenticateToken } from "@/middleware/auth-middleware";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function hanlder(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await cors(req, res, async () => {
+  await corsMiddleware(req, res, async () => {
     authenticateToken(req, res, async () => {
       if (req.method === "POST") {
         try {

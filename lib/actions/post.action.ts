@@ -7,7 +7,6 @@ import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
 import Comment from "@/database/comment.model";
 import User from "@/database/user.model";
-import { isUserExists } from "./user.action";
 import { MediaResponseDTO } from "@/dtos/MediaDTO";
 import Media from "@/database/media.model";
 import { console } from "inspector";
@@ -68,15 +67,25 @@ export async function createPost(
     throw error;
   }
 }
+
 export async function deletePost(postId: string) {
   try {
     connectToDatabase();
 
-    const deletedPost = await Post.findByIdAndDelete(postId);
-
-    if (!deletedPost) {
+    const post = await Post.findById(postId);
+    if (!post) {
       throw new Error(`Post with ID ${postId} does not exist.`);
     }
+
+    const commentIds = post.comments;
+
+    await Comment.deleteMany({ _id: { $in: commentIds } });
+
+    const media = post.media;
+
+    await Media.deleteMany({ _id: { $in: media } });
+
+    await Post.findByIdAndDelete(postId);
 
     return {
       status: true,
@@ -240,6 +249,7 @@ export const getAuthorByPostId = async (
       flag: author.flag,
       friendIds: author.friendIds,
       followingIds: author.followingIds,
+      followerIds: author.followerIds,
       bestFriendIds: author.bestFriendIds,
       blockedIds: author.blockedIds,
       postIds: author.postIds,

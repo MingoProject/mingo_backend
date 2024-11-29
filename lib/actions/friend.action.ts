@@ -43,14 +43,12 @@ export async function requestAddFriend(param: FriendRequestDTO) {
     console.log(error);
     throw error;
   }
-}
+} //
 
 export async function acceptFriendRequest(param: FriendRequestDTO) {
   try {
     const stUser = await isUserExists(param.sender);
     const ndUser = await isUserExists(param.receiver);
-    console.log(param.receiver);
-    console.log(param.receiver);
     const existedFriendRequest = await Relation.findOne({
       sender: new ObjectId(param.sender),
       receiver: new ObjectId(param.receiver),
@@ -83,7 +81,45 @@ export async function acceptFriendRequest(param: FriendRequestDTO) {
     console.log(error);
     throw error;
   }
-}
+} //p
+
+export async function unfollowUser(param: FriendRequestDTO) {
+  try {
+    const stUser = await isUserExists(param.sender);
+    const ndUser = await isUserExists(param.receiver);
+
+    if (!stUser || !ndUser) {
+      throw new Error("One or both users do not exist");
+    }
+
+    await User.updateOne(
+      { _id: param.sender },
+      { $pull: { followingIds: param.receiver } }
+    );
+
+    await User.updateOne(
+      { _id: param.receiver },
+      { $pull: { followerIds: param.sender } }
+    );
+
+    const deletedRelation = await Relation.findOneAndDelete({
+      sender: new ObjectId(param.sender),
+      receiver: new ObjectId(param.receiver),
+      relation: "friend",
+    });
+
+    if (!deletedRelation) {
+      console.log("Relation not found or already deleted");
+    } else {
+      console.log("Relation deleted:", deletedRelation);
+    }
+
+    return { message: "Unfollowed successfully and relation deleted" };
+  } catch (error) {
+    console.error("Error in unfollowUser:", error);
+    throw error;
+  }
+} //p
 
 export async function requestAddBFF(param: FriendRequestDTO) {
   try {
@@ -121,7 +157,7 @@ export async function requestAddBFF(param: FriendRequestDTO) {
     console.log(error);
     throw error;
   }
-}
+} //
 
 export async function acceptBFFRequest(param: FriendRequestDTO) {
   try {
@@ -137,6 +173,12 @@ export async function acceptBFFRequest(param: FriendRequestDTO) {
       throw new Error("Cannot find bestfriend relation");
     }
     existedBFFRequest.set("status", true);
+
+    await Relation.findOneAndDelete({
+      receiver: param.receiver,
+      sender: param.sender,
+      relation: "friend",
+    });
 
     stUser.bestFriendIds.addToSet(ndUser._id);
     ndUser.bestFriendIds.addToSet(stUser._id);
@@ -159,16 +201,40 @@ export async function acceptBFFRequest(param: FriendRequestDTO) {
     console.log(error);
     throw error;
   }
-}
+} //
+
+export async function unRequestAddBFF(param: FriendRequestDTO) {
+  try {
+    const stUser = await isUserExists(param.sender);
+    const ndUser = await isUserExists(param.receiver);
+
+    if (!stUser || !ndUser) {
+      throw new Error("One or both users do not exist");
+    }
+
+    const deletedRelation = await Relation.findOneAndDelete({
+      sender: new ObjectId(param.sender),
+      receiver: new ObjectId(param.receiver),
+      relation: "bff",
+    });
+
+    if (!deletedRelation) {
+      console.log("Relation not found or already deleted");
+    } else {
+      console.log("Relation deleted:", deletedRelation);
+    }
+
+    return { message: "Unfollowed successfully and relation deleted" };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+} //
 
 export async function unFriend(param: FriendRequestDTO) {
   try {
     await connectToDatabase();
-
-    // Sắp xếp ID của hai người dùng để đảm bảo tính nhất quán trong lưu trữ
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
-
-    // Kiểm tra xem quan hệ bạn bè có tồn tại không
     const existedFriendRelation = await Relation.findOne({
       stUser: stUser,
       ndUser: ndUser,
@@ -179,10 +245,7 @@ export async function unFriend(param: FriendRequestDTO) {
       return { message: "You are not friends!" };
     }
 
-    // Xóa quan hệ bạn bè
     await Relation.deleteOne({ _id: existedFriendRelation._id });
-
-    // Có thể cập nhật thêm danh sách bạn bè của từng người nếu cần
     await User.updateOne(
       { _id: param.sender },
       { $pull: { friendIds: param.receiver } }
@@ -206,23 +269,74 @@ export async function unFriend(param: FriendRequestDTO) {
     console.error(error);
     throw new Error("Failed to unfriend. Please try again.");
   }
-}
+} //
 
 export async function block(param: FriendRequestDTO) {
   try {
+    // await connectToDatabase();
+    // const [stUser, ndUser] = [param.sender, param.receiver].sort();
+    // await isUserExists(param.sender);
+    // await isUserExists(param.receiver);
+    // const existedBlockRelation = await Relation.findOne({
+    //   stUser: stUser,
+    //   ndUser: ndUser,
+    //   relation: "block",
+    //   status: true,
+    // });
+    // if (existedBlockRelation) {
+    //   return { message: "you have been blocked them!" };
+    // }
+    // await Relation.create({
+    //   stUser: stUser,
+    //   ndUser: ndUser,
+    //   relation: "block",
+    //   sender: param.sender,
+    //   receiver: param.receiver,
+    //   status: true,
+    //   createBy: param.sender,
+    // });
+    // const user = await User.findById(param.sender);
+
+    // await user.blockedIds.addToSet(param.receiver);
+    // await user.save();
+    // await unFriend(param);
+    // return { message: `Block ${param.receiver} successfully!` };
     await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
     await isUserExists(param.sender);
     await isUserExists(param.receiver);
+
     const existedBlockRelation = await Relation.findOne({
       stUser: stUser,
       ndUser: ndUser,
       relation: "block",
       status: true,
     });
+
     if (existedBlockRelation) {
-      return { message: "you have been blocked them!" };
+      return { message: "You have already blocked them!" };
     }
+
+    const bffRelation = await Relation.findOne({
+      stUser: stUser,
+      ndUser: ndUser,
+      relation: "bff",
+    });
+
+    if (bffRelation) {
+      await unBFF(param);
+    }
+
+    const friendRelation = await Relation.findOne({
+      stUser: stUser,
+      ndUser: ndUser,
+      relation: "friend",
+    });
+
+    if (friendRelation) {
+      await unFriend(param);
+    }
+
     await Relation.create({
       stUser: stUser,
       ndUser: ndUser,
@@ -232,17 +346,17 @@ export async function block(param: FriendRequestDTO) {
       status: true,
       createBy: param.sender,
     });
-    const user = await User.findById(param.sender);
 
+    const user = await User.findById(param.sender);
     await user.blockedIds.addToSet(param.receiver);
     await user.save();
-    await unFriend(param);
-    return { message: `Block ${param.receiver} successfully!` };
+
+    return { message: `Blocked ${param.receiver} successfully!` };
   } catch (error) {
     console.log(error);
     throw error;
   }
-}
+} //
 
 export async function unBFF(param: FriendRequestDTO) {
   try {
