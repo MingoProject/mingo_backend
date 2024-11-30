@@ -38,6 +38,7 @@ export async function createPost(
       createdAt: new Date(),
       author: createBy ? createBy : new mongoose.Types.ObjectId(),
       location: params.location,
+      tags: params.tags,
       privacy: {
         type: params.privacy?.type || "public",
         allowedUsers: params.privacy?.allowedUsers || [],
@@ -521,5 +522,57 @@ export const getLikesByPostId = async (
   } catch (error: any) {
     console.error("Error fetching media:", error.message);
     throw new Error("Error fetching media: " + error.message);
+  }
+};
+
+export const getTagsByPostId = async (
+  postId: string
+): Promise<UserResponseDTO[]> => {
+  try {
+    await connectToDatabase();
+
+    const post = await Post.findById(postId).populate({
+      path: "tags",
+      model: User,
+    });
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    const users: UserResponseDTO[] = post.tags.map((user: any) => {
+      return {
+        _id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        nickName: user.nickName,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        role: user.roles,
+        avatar: user.avatar,
+        background: user.background,
+        gender: user.gender,
+        address: user.address,
+        job: user.job,
+        hobbies: user.hobbies,
+        bio: user.bio,
+        relationShip: user.relationShip,
+        birthDay: user.birthDay,
+        attendDate: user.attendDate,
+        flag: user.flag,
+        friendIds: user.friendIds,
+        followingIds: user.followingIds,
+        followerIds: user.followerIds,
+        bestFriendIds: user.bestFriendIds,
+        blockedIds: user.blockedIds,
+        postIds: user.postIds,
+        createAt: user.createdAt,
+        createBy: user.createBy,
+      };
+    });
+
+    return users;
+  } catch (error: any) {
+    throw new Error("Error fetching comments: " + error.message);
   }
 };

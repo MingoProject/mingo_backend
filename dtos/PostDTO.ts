@@ -5,6 +5,7 @@ export interface PostCreateDTO {
   media?: string[];
   url?: string;
   location?: string;
+  tags?: string[];
   privacy?: {
     type: string;
     allowedUsers?: Schema.Types.ObjectId[];
@@ -23,6 +24,7 @@ export interface PostResponseDTO {
   savedByUsers: Schema.Types.ObjectId[];
   comments: Schema.Types.ObjectId[];
   location?: string;
+  tags?: Schema.Types.ObjectId[];
   privacy: {
     type: string;
     allowedUsers?: Schema.Types.ObjectId[];
