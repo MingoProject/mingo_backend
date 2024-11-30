@@ -9,6 +9,7 @@ import mongoose, { Schema } from "mongoose";
 import Post from "@/database/post.model";
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import User from "@/database/user.model";
+import Media from "@/database/media.model";
 
 export async function getAllComments() {
   try {
@@ -274,3 +275,68 @@ export const getLikesByCommentId = async (
     throw new Error("Error fetching media: " + error.message);
   }
 };
+
+export async function createCommentMedia(
+  params: CreateCommentDTO,
+  createBy: Schema.Types.ObjectId | undefined,
+  mediaId: string
+) {
+  try {
+    connectToDatabase();
+
+    const newComment = await Comment.create({
+      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      content: params.content,
+      replies: params.replies || null,
+      likes: [],
+      createdAt: new Date(),
+      createdTime: new Date(),
+      createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+    });
+
+    const media = await Media.findByIdAndUpdate(
+      mediaId,
+      {
+        $push: { comments: newComment._id },
+      },
+      { new: true }
+    );
+
+    return newComment;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function deleteCommentMedia(commentId: string, mediaId: string) {
+  try {
+    connectToDatabase();
+
+    // Xóa comment khỏi Comment model
+    const deleteComment = await Comment.findByIdAndDelete(commentId);
+    if (!deleteComment) {
+      return {
+        status: false,
+        message: `Comment with ID ${commentId} does not exist.`,
+      };
+    }
+
+    // Cập nhật Post để xóa comment khỏi danh sách comments
+    await Media.findByIdAndUpdate(
+      mediaId,
+      {
+        $pull: { comments: commentId }, // Xóa commentId khỏi array comments
+      },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Comment with ID ${commentId} has been deleted from media.`,
+    };
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
