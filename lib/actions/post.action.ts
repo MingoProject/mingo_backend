@@ -576,3 +576,26 @@ export const getTagsByPostId = async (
     throw new Error("Error fetching comments: " + error.message);
   }
 };
+
+export async function getPostById(
+  postId: string
+): Promise<PostResponseDTO | null> {
+  try {
+    await connectToDatabase();
+
+    const post = await Post.findById(postId)
+      .populate("author", "firstName lastName avatar")
+      .populate("media")
+      .populate("comments")
+      .populate("tags");
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    return post;
+  } catch (error) {
+    console.error("Error fetching post by ID:", error);
+    throw error;
+  }
+}
