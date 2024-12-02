@@ -34,7 +34,7 @@ export async function createComment(
     const newComment = await Comment.create({
       userId: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
-      replies: params.replies || null,
+      replies: params.replies || [],
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -48,6 +48,31 @@ export async function createComment(
       },
       { new: true }
     );
+
+    return newComment;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function createReplyComment(
+  params: CreateCommentDTO,
+  createBy: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+
+    const newComment = await Comment.create({
+      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      content: params.content,
+      replies: params.replies || [],
+      parentId: params.parentId || null,
+      likes: [],
+      createdAt: new Date(),
+      createdTime: new Date(),
+      createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+    });
 
     return newComment;
   } catch (error) {
@@ -97,7 +122,7 @@ export async function updateComment(
 
     const updatedComment = await Comment.findByIdAndUpdate(
       commentId,
-      { content: params.content },
+      { content: params.content, replies: params.replies },
       { new: true }
     );
 
@@ -113,6 +138,30 @@ export async function updateComment(
   } catch (error) {
     console.error(error);
     throw error;
+  }
+}
+
+export async function addReplyToComment(commentId: string, replyId: string) {
+  try {
+    const comment = await Comment.findById(commentId);
+
+    if (!comment) {
+      throw new Error(`Comment with ID ${commentId} not found.`);
+    }
+
+    if (!comment.replies) {
+      comment.replies = [];
+    }
+
+    comment.replies.push(replyId);
+    await comment.save();
+    return comment;
+  } catch (error: any) {
+    console.error("Error adding reply:", error);
+    return {
+      status: false,
+      message: error.message,
+    };
   }
 }
 
@@ -287,7 +336,7 @@ export async function createCommentMedia(
     const newComment = await Comment.create({
       userId: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
-      replies: params.replies || null,
+      replies: params.replies || [],
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -337,6 +386,65 @@ export async function deleteCommentMedia(commentId: string, mediaId: string) {
     };
   } catch (error) {
     console.error(error);
+    throw error;
+  }
+}
+
+export const getRepliesByCommentId = async (
+  commentId: string
+): Promise<CommentResponseDTO[]> => {
+  try {
+    await connectToDatabase();
+
+    const comment = await Comment.findById(commentId).populate({
+      path: "replies",
+      model: Comment,
+    });
+
+    if (!comment) {
+      throw new Error("Post not found");
+    }
+
+    const users: CommentResponseDTO[] = comment.replies.map((comment: any) => {
+      return {
+        _id: comment._id,
+        userId: comment.userId,
+        content: comment.content,
+        replies: comment.replies,
+        likes: comment.likes,
+        createdAt: comment.createAt,
+        createBy: comment.createBy,
+      };
+    });
+
+    return users;
+  } catch (error: any) {
+    console.error("Error fetching media:", error.message);
+    throw new Error("Error fetching media: " + error.message);
+  }
+};
+
+export async function getCommentById(
+  commentId: string
+): Promise<CommentResponseDTO | null> {
+  try {
+    await connectToDatabase();
+
+    const comment = await Comment.findById(commentId)
+      .populate("userId", "firstName lastName avatar")
+      .populate("replies")
+      .populate("likes");
+    if (comment?.parentId) {
+      await comment.populate("parentId");
+    }
+
+    if (!comment) {
+      throw new Error("comment not found");
+    }
+
+    return comment;
+  } catch (error) {
+    console.error("Error fetching comment by ID:", error);
     throw error;
   }
 }
