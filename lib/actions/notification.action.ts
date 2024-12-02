@@ -1,64 +1,43 @@
 import Notification from "@/database/notification.model";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { connectToDatabase } from "../mongoose";
+import { CreateNotificationDTO } from "@/dtos/NotificationDTO";
 
-// Tạo thông báo mới
-export async function createNotification(data: {
-  userId: string; // ID của người nhận thông báo
-  type: "post" | "comment" | "like"; // Loại thông báo
-  from: string; // ID của người gửi
-  resourceId: string; // ID của tài nguyên liên quan (bài viết, bình luận)
-  message?: string; // Nội dung của thông báo (tuỳ chọn)
-}) {
+export async function createNotification(params: CreateNotificationDTO) {
   try {
     await connectToDatabase();
-    const { userId, type, from, resourceId, message } = data;
-    const userObjectId = new Types.ObjectId(userId);
-    const fromObjectId = new Types.ObjectId(from);
-    const resourceObjectId = new Types.ObjectId(resourceId);
 
     const notification = await Notification.create({
-      user_id: userObjectId,
-      type,
-      from: fromObjectId,
-      resource_id: resourceObjectId,
+      senderId: params.senderId,
+      receiverId: params.receiverId,
+      type: params.type,
+      postId: params.postId || null,
+      commentId: params.commentId || null,
+      messageId: params.messageId || null,
+      mediaId: params.mediaId || null,
       isRead: false,
-      createdAt: new Date(),
-      message: message || "", // Thêm nội dung thông báo nếu có
+      createBy: params.senderId,
     });
 
-    return { success: true, notification };
+    return notification;
   } catch (error) {
     console.error("Error creating notification: ", error);
     throw error;
   }
 }
 
-// Cập nhật trạng thái thông báo (đã đọc hoặc chưa đọc)
-export async function updateNotificationStatus(
-  notificationId: string,
-  isRead: boolean
-) {
-  try {
-    await connectToDatabase();
-    const notification = await Notification.findByIdAndUpdate(
-      notificationId,
-      { isRead },
-      { new: true }
-    );
+export const getNotifications = async (
+  userId: mongoose.Schema.Types.ObjectId | undefined
+) => {
+  return await Notification.find({ receiverId: userId })
+    .populate("senderId", "avatar firstName lastName")
+    .sort({ createdAt: -1 });
+};
 
-    if (!notification) {
-      throw new Error("Notification not found");
-    }
+export const markAsRead = async (notificationId: string) => {
+  return await Notification.findByIdAndUpdate(notificationId, { isRead: true });
+};
 
-    return { success: true, notification };
-  } catch (error) {
-    console.error("Error updating notification status: ", error);
-    throw error;
-  }
-}
-
-// Lấy danh sách thông báo cho người dùng
 export async function fetchNotifications(userId: string) {
   try {
     await connectToDatabase();
