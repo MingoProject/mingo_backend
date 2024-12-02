@@ -27,7 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "lib/pusher.js"
+    "lib/pusher.ts"
   ],
   "exclude": ["node_modules"]
 }

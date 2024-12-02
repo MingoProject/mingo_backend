@@ -1,27 +1,38 @@
-import { IChat } from "@/database/chat.model";
-import { getAllChat } from "@/lib/actions/message.action";
-import { NextApiRequest, NextApiResponse } from "next";
+import { fetchMessage } from "@/lib/actions/message.action";
+import corsMiddleware, {
+  authenticateToken,
+} from "@/middleware/auth-middleware";
+import { NextApiRequest, NextApiResponse } from "next/types";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<IChat[] | { message: string }>
+  res: NextApiResponse
 ) {
-  if (req.method === "GET") {
-    const { userId } = req.query; // Lấy userId từ query params
+  corsMiddleware(req, res, async () => {
+    authenticateToken(req, res, async () => {
+      if (req.method === "GET") {
+        try {
+          const { boxId } = req.query;
+          if (!boxId) {
+            return res
+              .status(400)
+              .json({ message: "chatId or groupId is required" });
+          }
 
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
-    try {
-      const chats = await getAllChat(userId as string); // Gọi action để lấy tất cả các cuộc trò chuyện
-      res.status(200).json(chats); // Trả về danh sách các cuộc trò chuyện
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Unable to fetch chats" }); // Trả lỗi nếu có
-    }
-  } else {
-    res.setHeader("Allow", ["GET"]);
-    res.status(405).end(`Method ${req.method} Not Allowed`); // Nếu không phải GET, trả lỗi Method Not Allowed
-  }
+          const result = await fetchMessage(boxId as string);
+          res.status(200).json(result);
+        } catch (error) {
+          console.error("Error fetching messages: ", error);
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error occurred";
+          res
+            .status(500)
+            .json({ message: "Internal Server Error", error: errorMessage });
+        }
+      } else {
+        res.setHeader("Allow", ["GET"]);
+        res.status(405).end(`Method ${req.method} Not Allowed`);
+      }
+    });
+  });
 }
