@@ -2,10 +2,17 @@ import mongoose, { Schema } from "mongoose";
 
 export interface UpdateCommentDTO {
   content: string;
+  replies?: Schema.Types.ObjectId[];
 }
+
+export interface AddReplyCommentDTO {
+  replies?: Schema.Types.ObjectId[];
+}
+
 export interface CreateCommentDTO {
   content: string;
-  replies?: Schema.Types.ObjectId;
+  replies?: Schema.Types.ObjectId[];
+  parentId?: Schema.Types.ObjectId;
 }
 
 export interface CommentResponseDTO {
@@ -17,4 +24,5 @@ export interface CommentResponseDTO {
   likes: Schema.Types.ObjectId[];
   createBy: Schema.Types.ObjectId;
   createAt: Date;
+  parentId: Schema.Types.ObjectId;
 }
