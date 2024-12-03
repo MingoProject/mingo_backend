@@ -419,8 +419,8 @@ export const getRepliesByCommentId = async (
 
     return users;
   } catch (error: any) {
-    console.error("Error fetching media:", error.message);
-    throw new Error("Error fetching media: " + error.message);
+    console.error("Error fetching comment:", error.message);
+    throw new Error("Error fetching comment: " + error.message);
   }
 };
 
