@@ -38,22 +38,19 @@ export const markAsRead = async (notificationId: string) => {
   return await Notification.findByIdAndUpdate(notificationId, { isRead: true });
 };
 
-export async function fetchNotifications(userId: string) {
+export const deleteNotification = async (notificationId: string) => {
   try {
     await connectToDatabase();
-    const userObjectId = new Types.ObjectId(userId);
 
-    const notifications = await Notification.find({
-      user_id: userObjectId,
-    })
-      .sort({
-        createdAt: -1,
-      })
-      .exec();
+    const notification = await Notification.findByIdAndDelete(notificationId);
 
-    return { success: true, notifications };
+    if (!notification) {
+      throw new Error("Notification not found");
+    }
+
+    return { message: "Notification deleted successfully" };
   } catch (error) {
-    console.error("Error fetching notifications: ", error);
+    console.error("Error deleting notification: ", error);
     throw error;
   }
-}
+};

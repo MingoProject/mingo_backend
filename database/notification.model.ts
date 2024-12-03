@@ -11,6 +11,7 @@ export interface INotification extends Document, IAudit {
     | "friend_accept"
     | "bff_accept"
     | "comment"
+    | "comment_media"
     | "like"
     | "like_comment"
     | "like_media"
@@ -35,6 +36,7 @@ const NotificationSchema = new Schema<INotification>({
       "friend_accept",
       "bff_accept",
       "comment",
+      "comment_media",
       "like",
       "like_comment",
       "like_media",
