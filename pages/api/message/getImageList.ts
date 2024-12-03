@@ -1,4 +1,4 @@
-import { fetchMessage } from "@/lib/actions/message.action";
+import { getImageList } from "@/lib/actions/message.action";
 import corsMiddleware, {
   authenticateToken,
 } from "@/middleware/auth-middleware";
@@ -19,10 +19,10 @@ export default async function handler(
               .json({ message: "chatId or groupId is required" });
           }
 
-          const result = await fetchMessage(boxId as string);
+          const result = await getImageList(boxId as string);
           res.status(200).json(result);
         } catch (error) {
-          console.error("Error fetching messages: ", error);
+          console.error("Error fetching image messages: ", error);
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error occurred";
           res

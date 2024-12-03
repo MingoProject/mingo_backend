@@ -2,27 +2,29 @@ import { AuditSchema, IAudit } from "./audit.model";
 import { Schema, models, model, Document } from "mongoose";
 
 export interface IMessage extends Document, IAudit {
+  boxId: Schema.Types.ObjectId;
   status: boolean;
-  readed_ids: Schema.Types.ObjectId[];
-  contentModel: string;
+  readedId: Schema.Types.ObjectId[];
   contentId: Schema.Types.ObjectId[];
+  text: string[];
+  flag: boolean;
+  isReact: boolean;
 }
 
 const MessageSchema = new Schema<IMessage>({
+  boxId: { type: Schema.Types.ObjectId, ref: "Chat" },
   status: { type: Boolean, require: true, default: true },
-  readed_ids: [{ type: Schema.Types.ObjectId, ref: "User" }],
-  contentModel: {
-    type: String,
-    required: true,
-    enum: ["Text", "Image", "Video", "Voice", "Location"],
-  },
+  readedId: [{ type: Schema.Types.ObjectId, ref: "User" }],
   contentId: [
     {
       type: Schema.Types.ObjectId,
       required: true,
-      refPath: "contentModel",
+      ref: "File",
     },
   ],
+  text: [{ type: String, required: true }],
+  flag: { type: Boolean, required: true, default: true },
+  isReact: { type: Boolean, required: false, default: false },
 });
 
 MessageSchema.add(AuditSchema);

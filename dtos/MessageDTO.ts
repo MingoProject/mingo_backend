@@ -1,98 +1,104 @@
-import { Schema } from "mongoose";
-
-export interface ImageContent {
-  type: "image";
-  url: string;
-  altText?: string;
-}
-
-export interface LinkContent {
-  type: "link";
-  url: string;
-  title?: string;
-}
-
 export interface FileContent {
-  type: "file";
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-}
-
-export interface VideoContent {
-  type: "video";
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  duration: number;
-}
-
-export interface VoiceContent {
-  type: "voice";
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  duration: number;
-}
-
-export interface IconContent {
-  type: "icon";
-  name: string;
-}
-
-export interface SegmentMessageDTO {
-  groupId?: string;
-  userId: string;
-  userName: string;
-  ava: string;
-  content:
-    | string
-    | ImageContent
-    | LinkContent
-    | FileContent
-    | VideoContent
-    | IconContent
-    | VoiceContent;
-  time: Date;
-  recipientId: string[];
-}
-
-export interface ChatDTO {
-  messageBoxId: string;
-  messageBox: {
-    senderId: string;
-    receiverIds: string[];
-    messageIds: string[];
-    flag: boolean;
-    createAt: Date;
-    createBy: Schema.Types.ObjectId;
-  };
-}
-
-export interface Content {
   _id: string;
-  content:
-    | string
-    | ImageContent
-    | LinkContent
-    | FileContent
-    | VideoContent
-    | IconContent
-    | VoiceContent;
-  createAt: Date;
-  createBy: Schema.Types.ObjectId;
+  fileName: string;
+  url: string;
+  publicId: string;
+  bytes: string;
+  width: string;
+  height: string;
+  format: string;
+  type: string;
 }
 
-export interface MessageDTO {
+export interface GPSContent {
   _id: string;
-  status: boolean;
-  readed_ids: string[];
-  contentModel: string;
-  createAt: Date;
-  createBy: Schema.Types.ObjectId;
+  type: "gps";
+  latitude: number; // Vĩ độ
+  longitude: number; // Kinh độ
+  description?: string; // Mô tả địa điểm (tuỳ chọn)
 }
 
-export interface ResponseSendingDTO {
-  populatedMessage: MessageDTO;
-  messageBox: ChatDTO;
+export interface RequestSendMessageDTO {
+  boxId: string;
+  content: string | FileContent;
+}
+
+export interface UserInfoBox {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  nickName: string;
+  avatar: string;
+  phone: string;
+}
+
+export interface MessageBoxDTO {
+  _id: string;
+  senderId: string;
+  receiverIds: UserInfoBox[];
+  messageIds: string[];
+  groupName: string;
+  groupAva: string[];
+  flag: boolean;
+  pin: boolean;
+  createAt: string;
+  createBy: string;
+  lastMessage: ResponseMessageDTO;
+  readStatus: boolean;
+}
+
+export interface MessageBoxGroupDTO {
+  _id: string;
+  senderId: UserInfoBox[];
+  receiverIds: UserInfoBox[];
+  messageIds: string[];
+  groupName: string;
+  groupAva: string[];
+  flag: boolean;
+  pin: boolean;
+  createAt: string;
+  createBy: string;
+  lastMessage: ResponseMessageDTO;
+  readStatus: boolean;
+}
+
+export interface ResponseMessageBoxDTO {
+  box: MessageBoxDTO[];
+  adminId: string;
+}
+
+export interface ResponseMessageDTO {
+  id: string;
+  flag: boolean;
+  readedId: string[];
+  contentId: FileContent[] | GPSContent[];
+  text: string[];
+  boxId: string;
+  createAt: string;
+  createBy: string;
+  isReact: boolean;
+}
+
+export interface DetailMessageBoxDTO {
+  _id: string;
+  senderId: UserInfoBox;
+  receiverIds: UserInfoBox[];
+  messageIds: string[];
+  groupName: string;
+  groupAva: string[];
+  flag: boolean;
+  pin: boolean;
+  createAt: string;
+  createBy: string;
+  readStatus: boolean;
+}
+
+export interface PusherDeleteAndRevoke {
+  id: string;
+  flag: boolean;
+  isReact: boolean;
+  contentId: FileContent[] | GPSContent[];
+  text: string;
+  boxId: string;
+  action: string;
 }
