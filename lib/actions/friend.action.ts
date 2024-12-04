@@ -235,11 +235,13 @@ export async function unFriend(param: FriendRequestDTO) {
   try {
     await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
+    console.log(stUser);
     const existedFriendRelation = await Relation.findOne({
       stUser: stUser,
       ndUser: ndUser,
       relation: "friend",
     });
+    console.log(existedFriendRelation);
 
     if (!existedFriendRelation) {
       return { message: "You are not friends!" };
@@ -378,6 +380,15 @@ export async function unBFF(param: FriendRequestDTO) {
         { _id: param.receiver },
         { $pull: { bestFriendIds: param.sender } }
       );
+      await Relation.create({
+        stUser: stUserId,
+        ndUser: ndUserId,
+        relation: "friend",
+        sender: param.sender,
+        receiver: param.receiver,
+        createBy: param.sender,
+        status: true,
+      });
       stUser.friendIds.addToSet(ndUser._id);
       ndUser.friendIds.addToSet(stUser._id);
       await stUser.save();

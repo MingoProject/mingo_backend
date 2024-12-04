@@ -30,7 +30,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 ? files.file[0]
                 : files.file;
               const result = await cloudinary.uploader.upload(file.filepath, {
-                folder: "Avatar",
+                folder: "Background",
               });
 
               await uploadBackground(
@@ -38,13 +38,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 result.secure_url,
                 result.public_id
               );
-              return res
-                .status(200)
-                .json({
-                  status: true,
-                  message: "Update successfully!",
-                  result,
-                });
+              return res.status(200).json({
+                status: true,
+                message: "Update successfully!",
+                result,
+              });
             } catch (error) {
               console.error("Cloudinary upload error:", error);
               return res.status(500).json({ error: "Failed to upload image" });
