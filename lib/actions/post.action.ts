@@ -86,6 +86,8 @@ export async function deletePost(postId: string) {
 
     await Media.deleteMany({ _id: { $in: media } });
 
+    await User.updateMany({ postIds: postId }, { $pull: { postIds: postId } });
+
     await Post.findByIdAndDelete(postId);
 
     return {
