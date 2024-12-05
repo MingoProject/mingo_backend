@@ -617,29 +617,47 @@ export async function findMessages(boxId: string, query: string) {
     }).populate({
       path: "contentId",
       model: "File",
-      select: "",
+      select: "fileName description", // Select specific fields that you need
       options: { strictPopulate: false },
     });
 
     const resultMessages: ResponseMessageDTO[] = messages
       .filter((message) => {
         let content: string = "";
+
+        // Check if there's text to search
         if (message.text.length > 0 && message.contentId.length === 0) {
+          // Use the last message.text if it's an array
           content = message.text[message.text.length - 1];
-        } else {
-          const contentId = message.contentId[message.contentId.length - 1];
+        }
+        // Handle contentId (file or description)
+        else if (message.contentId.length > 0) {
+          const contentId = message.contentId[message.contentId.length - 1]; // Use the last contentId
+
           if ("fileName" in contentId) {
-            // contentId là FileContent
-            content = contentId.fileName;
+            content = contentId.fileName; // For FileContent (File)
           } else if ("description" in contentId) {
-            // contentId là GPSContent
-            content = contentId.description ? contentId.description : "";
+            content = contentId.description || ""; // For GPSContent (description)
           }
         }
-        return content
-          .toLowerCase()
-          .trim()
-          .includes(query.toLowerCase().trim());
+
+        // Clean content: remove hidden characters, non-breaking spaces, and trim spaces
+        content = content.replace(/\u00A0/g, " ").trim();
+
+        // Debugging: Log the actual matched content and query
+        console.log("Query:", query);
+        console.log("Content:", content);
+
+        // Check if content is a valid string
+        if (typeof content !== "string") {
+          console.log("Content is not a string, skipping this message");
+          return false; // Skip this message if content is not a string
+        }
+
+        // Return true if the content matches the query
+        const isMatch = content.toLowerCase().includes(query.toLowerCase());
+        console.log(isMatch, "this is message match result");
+        return isMatch;
       })
       .map((message) => ({
         id: message._id,
@@ -794,9 +812,80 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
   }
 }
 
+// export async function fetchBoxGroup(userId: string) {
+//   try {
+//     let populatedMessage;
+//     await connectToDatabase();
+
+//     // Lấy danh sách các nhóm chat
+//     const messageBoxes = await MessageBox.find({
+//       $and: [
+//         { receiverIds: { $in: [userId] } },
+//         {
+//           $expr: { $gt: [{ $size: "$receiverIds" }, 2] },
+//         },
+//       ],
+//     })
+//       .populate("receiverIds", "firstName lastName")
+//       .populate("senderId", "firstName lastName");
+
+//     if (!messageBoxes.length) {
+//       return {
+//         success: false,
+//         box: "No message boxes found for this userId",
+//       };
+//     }
+
+//     // Xử lý nội dung từng nhóm
+//     const messageBoxesWithContent: MessageBoxDTO[] = await Promise.all(
+//       messageBoxes.map(async (messageBox: any) => {
+//         // Lấy messageId cuối cùng
+//         const lastMessageId =
+//           messageBox.messageIds[messageBox.messageIds.length - 1];
+
+//         if (!lastMessageId) {
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: null,
+//             readStatus: false,
+//           };
+//         }
+
+//         // Lấy tin nhắn cuối cùng
+//         populatedMessage = await Message.findById(lastMessageId).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//         });
+
+//         if (populatedMessage) {
+//           // Kiểm tra trạng thái đã đọc
+//           const readStatus = populatedMessage.readedId.includes(userId);
+
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: populatedMessage,
+//             readStatus, // true hoặc false
+//           };
+//         }
+
+//         return {
+//           ...messageBox.toObject(),
+//           lastMessage: null,
+//           readStatus: false,
+//         };
+//       })
+//     );
+
+//     return { success: true, box: messageBoxesWithContent, adminId: userId };
+//   } catch (error) {
+//     console.error("Error fetching messages: ", error);
+//     throw error;
+//   }
+// }
+
 export async function fetchBoxGroup(userId: string) {
   try {
-    let populatedMessage;
     await connectToDatabase();
 
     // Lấy danh sách các nhóm chat
@@ -814,47 +903,51 @@ export async function fetchBoxGroup(userId: string) {
     if (!messageBoxes.length) {
       return {
         success: false,
-        box: "No message boxes found for this userId",
+        box: [],
+        adminId: userId,
+        message: "No message boxes found for this userId",
       };
     }
 
-    // Xử lý nội dung từng nhóm
-    const messageBoxesWithContent: MessageBoxGroupDTO[] = await Promise.all(
+    const messageBoxesWithContent: MessageBoxDTO[] = await Promise.all(
       messageBoxes.map(async (messageBox: any) => {
-        // Lấy messageId cuối cùng
         const lastMessageId =
           messageBox.messageIds[messageBox.messageIds.length - 1];
+        let lastMessage: ResponseMessageDTO | null = null;
 
-        if (!lastMessageId) {
-          return {
-            ...messageBox.toObject(),
-            lastMessage: null,
-            readStatus: false,
-          };
-        }
+        if (lastMessageId) {
+          const populatedMessage = await Message.findById(
+            lastMessageId
+          ).populate({
+            path: "contentId",
+            model: "File",
+            select: "",
+          });
 
-        // Lấy tin nhắn cuối cùng
-        populatedMessage = await Message.findById(lastMessageId).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-        });
-
-        if (populatedMessage) {
-          // Kiểm tra trạng thái đã đọc
-          const readStatus = populatedMessage.readedId.includes(userId);
-
-          return {
-            ...messageBox.toObject(),
-            lastMessage: populatedMessage,
-            readStatus, // true hoặc false
-          };
+          if (populatedMessage) {
+            lastMessage = populatedMessage.toObject();
+          }
         }
 
         return {
-          ...messageBox.toObject(),
-          lastMessage: null,
-          readStatus: false,
+          _id: messageBox._id,
+          senderId: messageBox.senderId,
+          receiverIds: messageBox.receiverIds.map((receiver: any) => ({
+            _id: receiver._id,
+            firstName: receiver.firstName,
+            lastName: receiver.lastName,
+          })),
+          messageIds: messageBox.messageIds,
+          groupName: messageBox.groupName || "Unnamed Group", // Lấy groupName hoặc giá trị mặc định
+          groupAva: messageBox.groupAva,
+          flag: messageBox.flag,
+          pin: messageBox.pin,
+          createAt: messageBox.createAt,
+          createBy: messageBox.createBy,
+          lastMessage, // Có thể là null
+          readStatus: lastMessage
+            ? lastMessage.readedId.includes(userId)
+            : false,
         };
       })
     );
@@ -862,7 +955,13 @@ export async function fetchBoxGroup(userId: string) {
     return { success: true, box: messageBoxesWithContent, adminId: userId };
   } catch (error) {
     console.error("Error fetching messages: ", error);
-    throw error;
+    return {
+      success: false,
+      box: [],
+      adminId: userId,
+      message: "Error fetching message boxes",
+      error: error,
+    };
   }
 }
 
@@ -966,6 +1065,23 @@ export async function getOtherList(boxId: string) {
     return imageFiles;
   } catch (error) {
     console.error("Error get other list: ", error);
+    throw error;
+  }
+}
+
+export async function removeChatBox(boxId: string) {
+  try {
+    await connectToDatabase();
+    const message = await MessageBox.findById(boxId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    await MessageBox.findByIdAndDelete(boxId);
+
+    return { success: true, message: "Message removed from database" };
+  } catch (error) {
+    console.error("Error remove messages from database: ", error);
     throw error;
   }
 }
