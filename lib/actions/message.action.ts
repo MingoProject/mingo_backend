@@ -617,29 +617,47 @@ export async function findMessages(boxId: string, query: string) {
     }).populate({
       path: "contentId",
       model: "File",
-      select: "",
+      select: "fileName description", // Select specific fields that you need
       options: { strictPopulate: false },
     });
 
     const resultMessages: ResponseMessageDTO[] = messages
       .filter((message) => {
         let content: string = "";
+
+        // Check if there's text to search
         if (message.text.length > 0 && message.contentId.length === 0) {
+          // Use the last message.text if it's an array
           content = message.text[message.text.length - 1];
-        } else {
-          const contentId = message.contentId[message.contentId.length - 1];
+        }
+        // Handle contentId (file or description)
+        else if (message.contentId.length > 0) {
+          const contentId = message.contentId[message.contentId.length - 1]; // Use the last contentId
+
           if ("fileName" in contentId) {
-            // contentId là FileContent
-            content = contentId.fileName;
+            content = contentId.fileName; // For FileContent (File)
           } else if ("description" in contentId) {
-            // contentId là GPSContent
-            content = contentId.description ? contentId.description : "";
+            content = contentId.description || ""; // For GPSContent (description)
           }
         }
-        return content
-          .toLowerCase()
-          .trim()
-          .includes(query.toLowerCase().trim());
+
+        // Clean content: remove hidden characters, non-breaking spaces, and trim spaces
+        content = content.replace(/\u00A0/g, " ").trim();
+
+        // Debugging: Log the actual matched content and query
+        console.log("Query:", query);
+        console.log("Content:", content);
+
+        // Check if content is a valid string
+        if (typeof content !== "string") {
+          console.log("Content is not a string, skipping this message");
+          return false; // Skip this message if content is not a string
+        }
+
+        // Return true if the content matches the query
+        const isMatch = content.toLowerCase().includes(query.toLowerCase());
+        console.log(isMatch, "this is message match result");
+        return isMatch;
       })
       .map((message) => ({
         id: message._id,
@@ -966,6 +984,23 @@ export async function getOtherList(boxId: string) {
     return imageFiles;
   } catch (error) {
     console.error("Error get other list: ", error);
+    throw error;
+  }
+}
+
+export async function removeChatBox(boxId: string) {
+  try {
+    await connectToDatabase();
+    const message = await MessageBox.findById(boxId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    await MessageBox.findByIdAndDelete(boxId);
+
+    return { success: true, message: "Message removed from database" };
+  } catch (error) {
+    console.error("Error remove messages from database: ", error);
     throw error;
   }
 }
