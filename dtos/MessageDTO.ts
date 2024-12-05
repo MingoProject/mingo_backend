@@ -43,7 +43,7 @@ export interface MessageBoxDTO {
   pin: boolean;
   createAt: string;
   createBy: string;
-  lastMessage: ResponseMessageDTO;
+  lastMessage: ResponseMessageDTO | null;
   readStatus: boolean;
 }
 

@@ -812,9 +812,80 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
   }
 }
 
+// export async function fetchBoxGroup(userId: string) {
+//   try {
+//     let populatedMessage;
+//     await connectToDatabase();
+
+//     // Lấy danh sách các nhóm chat
+//     const messageBoxes = await MessageBox.find({
+//       $and: [
+//         { receiverIds: { $in: [userId] } },
+//         {
+//           $expr: { $gt: [{ $size: "$receiverIds" }, 2] },
+//         },
+//       ],
+//     })
+//       .populate("receiverIds", "firstName lastName")
+//       .populate("senderId", "firstName lastName");
+
+//     if (!messageBoxes.length) {
+//       return {
+//         success: false,
+//         box: "No message boxes found for this userId",
+//       };
+//     }
+
+//     // Xử lý nội dung từng nhóm
+//     const messageBoxesWithContent: MessageBoxDTO[] = await Promise.all(
+//       messageBoxes.map(async (messageBox: any) => {
+//         // Lấy messageId cuối cùng
+//         const lastMessageId =
+//           messageBox.messageIds[messageBox.messageIds.length - 1];
+
+//         if (!lastMessageId) {
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: null,
+//             readStatus: false,
+//           };
+//         }
+
+//         // Lấy tin nhắn cuối cùng
+//         populatedMessage = await Message.findById(lastMessageId).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//         });
+
+//         if (populatedMessage) {
+//           // Kiểm tra trạng thái đã đọc
+//           const readStatus = populatedMessage.readedId.includes(userId);
+
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: populatedMessage,
+//             readStatus, // true hoặc false
+//           };
+//         }
+
+//         return {
+//           ...messageBox.toObject(),
+//           lastMessage: null,
+//           readStatus: false,
+//         };
+//       })
+//     );
+
+//     return { success: true, box: messageBoxesWithContent, adminId: userId };
+//   } catch (error) {
+//     console.error("Error fetching messages: ", error);
+//     throw error;
+//   }
+// }
+
 export async function fetchBoxGroup(userId: string) {
   try {
-    let populatedMessage;
     await connectToDatabase();
 
     // Lấy danh sách các nhóm chat
@@ -832,47 +903,51 @@ export async function fetchBoxGroup(userId: string) {
     if (!messageBoxes.length) {
       return {
         success: false,
-        box: "No message boxes found for this userId",
+        box: [],
+        adminId: userId,
+        message: "No message boxes found for this userId",
       };
     }
 
-    // Xử lý nội dung từng nhóm
-    const messageBoxesWithContent: MessageBoxGroupDTO[] = await Promise.all(
+    const messageBoxesWithContent: MessageBoxDTO[] = await Promise.all(
       messageBoxes.map(async (messageBox: any) => {
-        // Lấy messageId cuối cùng
         const lastMessageId =
           messageBox.messageIds[messageBox.messageIds.length - 1];
+        let lastMessage: ResponseMessageDTO | null = null;
 
-        if (!lastMessageId) {
-          return {
-            ...messageBox.toObject(),
-            lastMessage: null,
-            readStatus: false,
-          };
-        }
+        if (lastMessageId) {
+          const populatedMessage = await Message.findById(
+            lastMessageId
+          ).populate({
+            path: "contentId",
+            model: "File",
+            select: "",
+          });
 
-        // Lấy tin nhắn cuối cùng
-        populatedMessage = await Message.findById(lastMessageId).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-        });
-
-        if (populatedMessage) {
-          // Kiểm tra trạng thái đã đọc
-          const readStatus = populatedMessage.readedId.includes(userId);
-
-          return {
-            ...messageBox.toObject(),
-            lastMessage: populatedMessage,
-            readStatus, // true hoặc false
-          };
+          if (populatedMessage) {
+            lastMessage = populatedMessage.toObject();
+          }
         }
 
         return {
-          ...messageBox.toObject(),
-          lastMessage: null,
-          readStatus: false,
+          _id: messageBox._id,
+          senderId: messageBox.senderId,
+          receiverIds: messageBox.receiverIds.map((receiver: any) => ({
+            _id: receiver._id,
+            firstName: receiver.firstName,
+            lastName: receiver.lastName,
+          })),
+          messageIds: messageBox.messageIds,
+          groupName: messageBox.groupName || "Unnamed Group", // Lấy groupName hoặc giá trị mặc định
+          groupAva: messageBox.groupAva,
+          flag: messageBox.flag,
+          pin: messageBox.pin,
+          createAt: messageBox.createAt,
+          createBy: messageBox.createBy,
+          lastMessage, // Có thể là null
+          readStatus: lastMessage
+            ? lastMessage.readedId.includes(userId)
+            : false,
         };
       })
     );
@@ -880,7 +955,13 @@ export async function fetchBoxGroup(userId: string) {
     return { success: true, box: messageBoxesWithContent, adminId: userId };
   } catch (error) {
     console.error("Error fetching messages: ", error);
-    throw error;
+    return {
+      success: false,
+      box: [],
+      adminId: userId,
+      message: "Error fetching message boxes",
+      error: error,
+    };
   }
 }
 
