@@ -373,6 +373,30 @@ export async function getMyFollowings(id: String | undefined) {
   }
 }
 
+export async function getMyFollower(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    // Tìm user và chỉ lấy friendIds
+    const user = await User.findById(id).select("followerIds");
+
+    if (!user || !Array.isArray(user.followerIds)) {
+      console.log(`Cannot get ${id} follower now`);
+      throw new Error(`Cannot get ${id} follower now`);
+    }
+
+    // Truy vấn danh sách bạn bè dựa trên friendIds
+    const follower = await User.find({
+      _id: { $in: user.followerIds }, // Lấy danh sách bạn bè theo ObjectId
+    });
+
+    return follower;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
 export async function getMyBlocks(id: String | undefined) {
   try {
     connectToDatabase();

@@ -24,6 +24,14 @@ export default async function handler(
       try {
         const { membersIds, leaderId, groupName, groupAva } = req.body;
 
+        console.log(
+          membersIds,
+          leaderId,
+          groupName,
+          groupAva,
+          "this is fortest"
+        );
+
         if (
           !membersIds ||
           !Array.isArray(membersIds) ||

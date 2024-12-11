@@ -15,6 +15,7 @@ export default async function handler(
           if (req.user && req.user.id) {
             const { boxId } = req.query;
             const { query } = req.query;
+            const userId = req.user.id.toString();
             if (!boxId) {
               return res
                 .status(400)
@@ -23,7 +24,11 @@ export default async function handler(
             if (!query) {
               return res.status(400).json({ message: "userId is required" });
             }
-            const result = await findMessages(boxId as string, query as string);
+            const result = await findMessages(
+              boxId as string,
+              query as string,
+              userId as string
+            );
             res.status(200).json(result);
           } else {
             return res.status(403).json({

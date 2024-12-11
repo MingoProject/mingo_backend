@@ -12,15 +12,25 @@ export default async function handler(
     authenticateToken(req, res, async () => {
       if (req.method === "GET") {
         try {
-          const { boxId } = req.query;
-          if (!boxId) {
-            return res
-              .status(400)
-              .json({ message: "chatId or groupId is required" });
-          }
+          if (req.user && req.user.id) {
+            const { boxId } = req.query;
+            const userId = req.user.id.toString();
+            if (!boxId) {
+              return res
+                .status(400)
+                .json({ message: "chatId or groupId is required" });
+            }
 
-          const result = await getVideoList(boxId as string);
-          res.status(200).json(result);
+            const result = await getVideoList(
+              boxId as string,
+              userId as string
+            );
+            res.status(200).json(result);
+          } else {
+            return res.status(403).json({
+              message: "Forbidden: You do not have the required role",
+            });
+          }
         } catch (error) {
           console.error("Error fetching video messages: ", error);
           const errorMessage =
