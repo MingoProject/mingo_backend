@@ -9,6 +9,7 @@ export interface IMessage extends Document, IAudit {
   text: string[];
   flag: boolean;
   isReact: boolean;
+  visibility: Map<string, boolean>;
 }
 
 const MessageSchema = new Schema<IMessage>({
@@ -25,6 +26,11 @@ const MessageSchema = new Schema<IMessage>({
   text: [{ type: String, required: true }],
   flag: { type: Boolean, required: true, default: true },
   isReact: { type: Boolean, required: false, default: false },
+  visibility: {
+    type: Map,
+    of: Boolean,
+    default: () => new Map([["defaultUserId", true]]),
+  },
 });
 
 MessageSchema.add(AuditSchema);
