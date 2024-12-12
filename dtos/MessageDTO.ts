@@ -43,7 +43,7 @@ export interface MessageBoxDTO {
   pin: boolean;
   createAt: string;
   createBy: string;
-  lastMessage: ResponseMessageDTO;
+  lastMessage: ResponseMessageDTO | null;
   readStatus: boolean;
 }
 
@@ -71,8 +71,8 @@ export interface ResponseMessageDTO {
   id: string;
   flag: boolean;
   readedId: string[];
-  contentId: FileContent[] | GPSContent[];
-  text: string[];
+  contentId: FileContent;
+  text: string;
   boxId: string;
   createAt: string;
   createBy: string;
@@ -101,4 +101,27 @@ export interface PusherDeleteAndRevoke {
   text: string;
   boxId: string;
   action: string;
+}
+
+export interface PusherRevoke {
+  id: string;
+  flag: boolean;
+  isReact: boolean;
+  text: string;
+  boxId: string;
+  action: string;
+  createAt: string;
+  createBy: string;
+}
+
+export interface PusherDelete {
+  id: string;
+  flag: boolean;
+  visibility: boolean;
+  isReact: boolean;
+  text: string;
+  boxId: string;
+  action: string;
+  createAt: string;
+  createBy: string;
 }

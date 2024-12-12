@@ -13,6 +13,8 @@ import {
   ResponseMessageBoxDTO,
   ResponseMessageDTO,
   PusherDeleteAndRevoke,
+  PusherRevoke,
+  PusherDelete,
 } from "@/dtos/MessageDTO";
 import mongoose, { Schema, Types } from "mongoose";
 import User from "@/database/user.model";
@@ -94,7 +96,8 @@ async function createFile(file: formidable.File, userId: string) {
 async function createContent(
   data: RequestSendMessageDTO,
   files: formidable.Files,
-  userId: string
+  userId: string,
+  membersIds: string[]
 ) {
   let contentIds: mongoose.Types.ObjectId[] = [];
   const userObjectId = new Types.ObjectId(userId);
@@ -120,9 +123,14 @@ async function createContent(
     throw new Error("Invalid content type");
   }
 
+  const visibilityMap = new Map();
+  membersIds.forEach((member) => {
+    visibilityMap.set(member.toString(), true); // Gán true cho tất cả userId
+  });
   // Tạo tin nhắn
   const message = await Message.create({
     flag: true,
+    visibility: visibilityMap,
     readedId: [userId],
     contentId: contentIds,
     text: text,
@@ -150,7 +158,7 @@ export async function createMessage(
       const receiverIdsArray = detailBox.receiverIds;
 
       if (receiverIdsArray.length > 2) {
-        const membersIds = [
+        const membersIds: string[] = [
           ...receiverIdsArray.map((id: { toString: () => any }) =>
             id.toString()
           ),
@@ -161,7 +169,7 @@ export async function createMessage(
           throw new Error("UserId must be in MembersId list");
         }
 
-        const message = await createContent(data, files, userId);
+        const message = await createContent(data, files, userId, membersIds);
         const populatedMessage = await Message.findById(message._id).populate({
           path: "contentId",
           model: "File",
@@ -185,11 +193,12 @@ export async function createMessage(
           flag: true,
           isReact: false,
           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-          contentId: populatedMessage.contentId,
-          text: populatedMessage.text,
+          contentId:
+            populatedMessage.contentId[populatedMessage.contentId.length - 1],
+          text: populatedMessage.text[populatedMessage.text.length - 1],
           boxId: data.boxId,
           // Chuyển ObjectId sang chuỗi
-          createAt: populatedMessage.createAt, // ISO string đã hợp lệ
+          createAt: new Date().toISOString(), // ISO string đã hợp lệ
           createBy: populatedMessage.createBy.toString(),
         };
 
@@ -209,7 +218,13 @@ export async function createMessage(
         if (relationBlock) {
           throw new Error("Sender is blocked by Receiver");
         }
-        const message = await createContent(data, files, userId);
+        const membersIds: string[] = [
+          ...receiverIdsArray.map((id: { toString: () => any }) =>
+            id.toString()
+          ),
+          detailBox.senderId.toString(),
+        ];
+        const message = await createContent(data, files, userId, membersIds);
         detailBox = await MessageBox.findByIdAndUpdate(
           detailBox._id,
           {
@@ -231,11 +246,12 @@ export async function createMessage(
           flag: true,
           isReact: false,
           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-          contentId: populatedMessage.contentId,
-          text: populatedMessage.text,
+          contentId:
+            populatedMessage.contentId[populatedMessage.contentId.length - 1],
+          text: populatedMessage.text[populatedMessage.text.length - 1],
           boxId: data.boxId,
           // Chuyển ObjectId sang chuỗi
-          createAt: populatedMessage.createAt, // ISO string đã hợp lệ
+          createAt: new Date().toISOString(), // ISO string đã hợp lệ
           createBy: populatedMessage.createBy.toString(),
         };
 
@@ -248,7 +264,10 @@ export async function createMessage(
         return { success: true, message: "Send successfully" };
       }
     } else {
-      const message = await createContent(data, files, userId);
+      const message = await createContent(data, files, userId, [
+        userId,
+        data.boxId,
+      ]);
       const populatedMessage = await Message.findById(message._id).populate({
         path: "contentId",
         model: "File",
@@ -270,11 +289,12 @@ export async function createMessage(
         flag: true,
         isReact: false,
         readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-        contentId: populatedMessage.contentId,
-        text: populatedMessage.text,
+        contentId:
+          populatedMessage.contentId[populatedMessage.contentId.length - 1],
+        text: populatedMessage.text[populatedMessage.text.length - 1],
         boxId: data.boxId,
         // Chuyển ObjectId sang chuỗi
-        createAt: populatedMessage.createAt, // ISO string đã hợp lệ
+        createAt: new Date().toISOString(), // ISO string đã hợp lệ
         createBy: populatedMessage.createBy.toString(),
       };
 
@@ -307,16 +327,15 @@ export async function createGroup(
   if (!allMembersExist) {
     throw new Error("One or more member IDs do not exist");
   }
+
   const existMessageBox = await MessageBox.findOne({
     receiverIds: { $all: membersIds },
-  });
+  })
+    .where("receiverIds")
+    .size(membersIds.length);
 
   if (existMessageBox) {
-    return {
-      success: true,
-      messageBoxId: existMessageBox._id,
-      existMessageBox,
-    };
+    throw new Error("Exist group have same members");
   }
 
   const userObjectId = new Types.ObjectId(leaderId);
@@ -356,7 +375,11 @@ export async function editMessage(
   try {
     await connectToDatabase();
 
-    const message = await Message.findById(messageId);
+    const message = await Message.findOne({
+      _id: messageId,
+      [`visibility.${userId}`]: true,
+      flag: true,
+    });
 
     if (!message) {
       throw new Error("Message not found");
@@ -366,10 +389,23 @@ export async function editMessage(
         message.text.push(newContent);
         message.updatedAt = new Date();
         await message.save();
-        const updatedMessage = await Message.findById(messageId).populate(
+        const updatedMessage = await Message.findById(message._id).populate(
           "contentId"
         );
-        return { success: true, updatedMessage };
+        const editedMessage: ResponseMessageDTO = {
+          id: updatedMessage._id.toString(),
+          flag: true,
+          isReact: false,
+          readedId: updatedMessage.readedId.map((id: any) => id.toString()),
+          contentId:
+            updatedMessage.contentId[updatedMessage.contentId.length - 1],
+          text: newContent,
+          boxId: updatedMessage.boxId.toString(),
+          // Chuyển ObjectId sang chuỗi
+          createAt: updatedMessage.createAt,
+          createBy: updatedMessage.createBy.toString(),
+        };
+        return { success: true, editedMessage };
       } else {
         throw new Error("Only text can be edited");
       }
@@ -398,21 +434,18 @@ export async function deleteOrRevokeMessage(
     }
 
     if (action === "revoke") {
-      if (message.text && message.text.length > 0) {
-        message.text.push("Message revoked");
-      } else if (message.contentId && message.contentId.length > 0) {
-        message.text = message.text || [];
-        message.text.push("Message revoked");
-      }
+      message.flag = false;
+
       await message.save();
-      const pusherMessage: PusherDeleteAndRevoke = {
+      const pusherMessage: PusherRevoke = {
         id: message._id.toString(),
         flag: message.flag,
         isReact: message.isReact,
-        contentId: message.contentId,
-        text: message.text,
+        text: "Message revoked",
         boxId: message.boxId.toString(),
         action: "revoke",
+        createAt: new Date().toISOString(),
+        createBy: userId,
       };
 
       await pusherServer
@@ -423,16 +456,18 @@ export async function deleteOrRevokeMessage(
         .catch((error) => console.error("Failed to revoke message:", error));
       return { success: true, message: "Message revoked" };
     } else if (action == "delete") {
-      message.flag = false;
+      message.visibility.set(userId, false);
       await message.save();
-      const pusherMessage: PusherDeleteAndRevoke = {
+      const pusherMessage: PusherDelete = {
         id: message._id.toString(),
         flag: message.flag,
+        visibility: false,
         isReact: message.isReact,
-        contentId: message.contentId,
-        text: message.text,
+        text: "Message deleted",
         boxId: message.boxId.toString(),
         action: "delete",
+        createAt: new Date().toISOString(),
+        createBy: userId,
       };
 
       await pusherServer
@@ -451,39 +486,52 @@ export async function deleteOrRevokeMessage(
   }
 }
 
-export async function fetchMessage(boxId: string) {
+export async function fetchMessage(boxId: string, userId: string) {
   try {
     await connectToDatabase();
 
+    // Tìm kiếm MessageBox và populate các messageIds
     const messageBox = await MessageBox.findById(boxId).populate("messageIds");
 
     if (!messageBox) {
       throw new Error("MessageBox not found");
     }
 
+    // Lọc các tin nhắn có visibility là true đối với userId
     const messagesWithContent: ResponseMessageDTO[] = await Promise.all(
       messageBox.messageIds.map(async (messageId: any) => {
-        const message = await Message.findById(messageId);
+        // Tìm tin nhắn với messageId và kiểm tra visibility của userId
+        const message = await Message.findOne({
+          _id: messageId,
+          [`visibility.${userId}`]: true, // Kiểm tra visibility của userId
+        });
 
         if (!message) {
-          throw new Error(`Message not found for ID: ${messageId}`);
+          // Nếu không tìm thấy tin nhắn có visibility đúng, bỏ qua
+          return null;
         }
 
-        const populatedMessage = await Message.findById(messageId).populate({
+        // Populate nội dung của tin nhắn
+        const populatedMessage = await message.populate({
           path: "contentId",
           model: "File",
           select: "",
           options: { strictPopulate: false },
         });
 
+        // Tạo DTO cho tin nhắn với nội dung đã populate
         const responseMessage: ResponseMessageDTO = {
           id: populatedMessage._id,
           flag: populatedMessage.flag,
           isReact: populatedMessage.isReact,
           readedId: populatedMessage.readedId,
-          contentId: populatedMessage.contentId,
-          text: populatedMessage.text,
-          boxId: populatedMessage.boxId,
+          contentId: populatedMessage.flag
+            ? populatedMessage.contentId[populatedMessage.contentId.length - 1]
+            : undefined,
+          text: populatedMessage.flag
+            ? populatedMessage.text[populatedMessage.text.length - 1]
+            : "Message revoked", // Nếu tin nhắn bị thu hồi
+          boxId: populatedMessage.boxId.toString(),
           createAt: populatedMessage.createAt,
           createBy: populatedMessage.createBy,
         };
@@ -492,7 +540,10 @@ export async function fetchMessage(boxId: string) {
       })
     );
 
-    return { success: true, messages: messagesWithContent };
+    // Lọc bỏ các tin nhắn không hợp lệ (null)
+    const validMessages = messagesWithContent.filter(Boolean);
+
+    return { success: true, messages: validMessages };
   } catch (error) {
     console.error("Error fetching messages: ", error);
     throw error;
@@ -600,66 +651,6 @@ export async function markMessageAsRead(boxId: string, userId: string) {
   }
 }
 
-export async function findMessages(boxId: string, query: string) {
-  try {
-    await connectToDatabase();
-
-    const messageBox = await MessageBox.findById(boxId).populate("messageIds");
-    if (!messageBox) {
-      throw new Error("Box not found");
-    }
-    if (messageBox.messageIds.length === 0) {
-      return { success: false, messages: [] };
-    }
-
-    const messages = await Message.find({
-      _id: { $in: messageBox.messageIds },
-    }).populate({
-      path: "contentId",
-      model: "File",
-      select: "",
-      options: { strictPopulate: false },
-    });
-
-    const resultMessages: ResponseMessageDTO[] = messages
-      .filter((message) => {
-        let content: string = "";
-        if (message.text.length > 0 && message.contentId.length === 0) {
-          content = message.text[message.text.length - 1];
-        } else {
-          const contentId = message.contentId[message.contentId.length - 1];
-          if ("fileName" in contentId) {
-            // contentId là FileContent
-            content = contentId.fileName;
-          } else if ("description" in contentId) {
-            // contentId là GPSContent
-            content = contentId.description ? contentId.description : "";
-          }
-        }
-        return content
-          .toLowerCase()
-          .trim()
-          .includes(query.toLowerCase().trim());
-      })
-      .map((message) => ({
-        id: message._id,
-        flag: message.flag,
-        isReact: message.isReact,
-        readedId: message.readedId,
-        contentId: message.contentId,
-        text: message.text,
-        boxId: message.boxId,
-        createAt: message.createAt,
-        createBy: message.createBy,
-      }));
-
-    return { success: true, messages: resultMessages };
-  } catch (error) {
-    console.error("Error searching messages: ", error);
-    throw error;
-  }
-}
-
 export async function fetchBoxChat(userId: string) {
   try {
     await connectToDatabase();
@@ -680,10 +671,22 @@ export async function fetchBoxChat(userId: string) {
 
     // Xử lý từng box để lấy tin nhắn cuối và kiểm tra trạng thái đọc
     const messageBoxesWithDetails: MessageBoxDTO[] = await Promise.all(
-      messageBoxes.map(async (messageBox: any) => {
-        // Lấy tin nhắn cuối cùng
-        const lastMessageId =
-          messageBox.messageIds[messageBox.messageIds.length - 1];
+      messageBoxes.map(async (messageBox) => {
+        // Lọc những messageIds có visibility của userId là true
+        const filteredMessageIds = await Promise.all(
+          messageBox.messageIds.map(async (messageId: any) => {
+            const message = await Message.findById(messageId).select(
+              "visibility"
+            );
+            return message?.visibility?.get(userId) === true ? messageId : null;
+          })
+        );
+
+        // Lọc bỏ các null values trong mảng
+        const validMessageIds = filteredMessageIds.filter((id) => id !== null);
+
+        // Lấy tin nhắn cuối cùng từ danh sách hợp lệ
+        const lastMessageId = validMessageIds[validMessageIds.length - 1];
 
         if (!lastMessageId) {
           return {
@@ -712,9 +715,25 @@ export async function fetchBoxChat(userId: string) {
         const isRead = lastMessage.readedId.includes(userId);
         const readStatus = isRead ? true : false;
 
+        const responseLastMessage: ResponseMessageDTO = {
+          id: lastMessage._id,
+          flag: lastMessage.flag,
+          isReact: lastMessage.isReact,
+          readedId: lastMessage.readedId,
+          contentId: lastMessage.flag
+            ? lastMessage.contentId[lastMessage.contentId.length - 1]
+            : undefined,
+          text: lastMessage.flag
+            ? lastMessage.text[lastMessage.text.length - 1]
+            : "Message revoked",
+          boxId: lastMessage.boxId.toString(),
+          createAt: lastMessage.createAt,
+          createBy: lastMessage.createBy,
+        };
+
         return {
           ...messageBox.toObject(),
-          lastMessage,
+          responseLastMessage,
           readStatus,
         };
       })
@@ -749,7 +768,6 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
         message: "No message boxes found for this boxId",
       };
     }
-
     // Lấy tin nhắn cuối cùng
     const lastMessageId =
       messageBox.messageIds[messageBox.messageIds.length - 1];
@@ -770,7 +788,7 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
       select: "",
     });
 
-    if (!lastMessageId) {
+    if (!lastMessage) {
       return {
         box: {
           ...messageBox.toObject(),
@@ -796,7 +814,6 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
 
 export async function fetchBoxGroup(userId: string) {
   try {
-    let populatedMessage;
     await connectToDatabase();
 
     // Lấy danh sách các nhóm chat
@@ -808,22 +825,33 @@ export async function fetchBoxGroup(userId: string) {
         },
       ],
     })
-      .populate("receiverIds", "firstName lastName")
-      .populate("senderId", "firstName lastName");
+      .populate("receiverIds", "firstName lastName nickName avatar phoneNumber")
+      .populate("senderId", "firstName lastName nickName avatar phoneNumber");
+
+    console.log(messageBoxes);
 
     if (!messageBoxes.length) {
-      return {
-        success: false,
-        box: "No message boxes found for this userId",
-      };
+      return { success: true, box: [] };
     }
 
     // Xử lý nội dung từng nhóm
     const messageBoxesWithContent: MessageBoxGroupDTO[] = await Promise.all(
-      messageBoxes.map(async (messageBox: any) => {
-        // Lấy messageId cuối cùng
-        const lastMessageId =
-          messageBox.messageIds[messageBox.messageIds.length - 1];
+      messageBoxes.map(async (messageBox) => {
+        // Lọc những messageIds có visibility của userId là true
+        const filteredMessageIds = await Promise.all(
+          messageBox.messageIds.map(async (messageId: any) => {
+            const message = await Message.findById(messageId).select(
+              "visibility"
+            );
+            return message?.visibility?.get(userId) === true ? messageId : null;
+          })
+        );
+
+        // Lọc bỏ các giá trị null
+        const validMessageIds = filteredMessageIds.filter((id) => id !== null);
+
+        // Lấy tin nhắn cuối cùng
+        const lastMessageId = validMessageIds[validMessageIds.length - 1];
 
         if (!lastMessageId) {
           return {
@@ -833,28 +861,45 @@ export async function fetchBoxGroup(userId: string) {
           };
         }
 
-        // Lấy tin nhắn cuối cùng
-        populatedMessage = await Message.findById(lastMessageId).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-        });
+        // Lấy tin nhắn cuối cùng với đầy đủ thông tin
+        const populatedMessage = await Message.findById(lastMessageId).populate(
+          {
+            path: "contentId",
+            model: "File",
+            select: "",
+          }
+        );
 
-        if (populatedMessage) {
-          // Kiểm tra trạng thái đã đọc
-          const readStatus = populatedMessage.readedId.includes(userId);
-
+        if (!populatedMessage) {
           return {
             ...messageBox.toObject(),
-            lastMessage: populatedMessage,
-            readStatus, // true hoặc false
+            lastMessage: null,
+            readStatus: false,
           };
         }
 
+        // Kiểm tra trạng thái đã đọc
+        const readStatus = populatedMessage.readedId.includes(userId);
+        const responseLastMessage: ResponseMessageDTO = {
+          id: populatedMessage._id,
+          flag: populatedMessage.flag,
+          isReact: populatedMessage.isReact,
+          readedId: populatedMessage.readedId,
+          contentId: populatedMessage.flag
+            ? populatedMessage.contentId[populatedMessage.contentId.length - 1]
+            : undefined,
+          text: populatedMessage.flag
+            ? populatedMessage.text[populatedMessage.text.length - 1]
+            : "Message revoked",
+          boxId: populatedMessage.boxId.toString(),
+          createAt: populatedMessage.createAt,
+          createBy: populatedMessage.createBy,
+        };
+
         return {
           ...messageBox.toObject(),
-          lastMessage: null,
-          readStatus: false,
+          lastMessage: responseLastMessage,
+          readStatus,
         };
       })
     );
@@ -866,7 +911,7 @@ export async function fetchBoxGroup(userId: string) {
   }
 }
 
-export async function getImageList(boxId: string) {
+export async function getImageList(boxId: string, userId: string) {
   try {
     await connectToDatabase();
     const messageBox = await MessageBox.findById(boxId);
@@ -874,11 +919,19 @@ export async function getImageList(boxId: string) {
       throw new Error("MessageBox not found or has no messages");
     }
 
-    const messages = await Message.find({ _id: { $in: messageBox.messageIds } })
-      .select("contentId")
+    const messages: ResponseMessageDTO[] = await Message.find({
+      _id: { $in: messageBox.messageIds },
+    })
+      .select("contentId visibility")
       .exec();
 
-    const fileIds = messages.flatMap((msg: any) => msg.contentId);
+    // Lọc các message mà visibility của userId là true
+    const visibleMessages = messages.filter((msg: any) => {
+      return msg.visibility?.get(userId) === true;
+    });
+
+    // Lấy danh sách contentId từ các message phù hợp
+    const fileIds = visibleMessages.flatMap((msg: any) => msg.contentId);
 
     const imageFiles: FileContent[] = await File.find({
       _id: { $in: fileIds },
@@ -892,28 +945,40 @@ export async function getImageList(boxId: string) {
   }
 }
 
-export async function getVideoList(boxId: string) {
+export async function getVideoList(boxId: string, userId: string) {
   try {
     await connectToDatabase();
+
+    // Tìm MessageBox bằng ID
     const messageBox = await MessageBox.findById(boxId);
     if (!messageBox || !messageBox.messageIds) {
       throw new Error("MessageBox not found or has no messages");
     }
 
-    const messages = await Message.find({ _id: { $in: messageBox.messageIds } })
-      .select("contentId")
+    // Lấy danh sách messages với contentId và visibility
+    const messages: ResponseMessageDTO[] = await Message.find({
+      _id: { $in: messageBox.messageIds },
+    })
+      .select("contentId visibility")
       .exec();
 
-    const fileIds = messages.flatMap((msg: any) => msg.contentId);
+    // Lọc các message mà visibility của userId là true
+    const visibleMessages = messages.filter((msg: any) => {
+      return msg.visibility?.get(userId) === true;
+    });
 
-    const imageFiles = await File.find({
+    // Lấy danh sách contentId từ các message phù hợp
+    const fileIds = visibleMessages.flatMap((msg: any) => msg.contentId);
+
+    // Tìm các video từ File collection dựa trên fileIds
+    const videoFiles = await File.find({
       _id: { $in: fileIds },
       type: "Video",
     }).exec();
 
-    return imageFiles;
+    return videoFiles;
   } catch (error) {
-    console.error("Error get video list: ", error);
+    console.error("Error getting video list: ", error);
     throw error;
   }
 }
@@ -944,20 +1009,26 @@ export async function getAudioList(boxId: string) {
   }
 }
 
-export async function getOtherList(boxId: string) {
+export async function getOtherList(boxId: string, userId: string) {
   try {
     await connectToDatabase();
     const messageBox = await MessageBox.findById(boxId);
     if (!messageBox || !messageBox.messageIds) {
       throw new Error("MessageBox not found or has no messages");
     }
-
-    const messages = await Message.find({ _id: { $in: messageBox.messageIds } })
-      .select("contentId")
+    const messages: ResponseMessageDTO[] = await Message.find({
+      _id: { $in: messageBox.messageIds },
+    })
+      .select("contentId visibility")
       .exec();
 
-    const fileIds = messages.flatMap((msg: any) => msg.contentId);
+    // Lọc các message mà visibility của userId là true
+    const visibleMessages = messages.filter((msg: any) => {
+      return msg.visibility?.get(userId) === true;
+    });
 
+    // Lấy danh sách contentId từ các message phù hợp
+    const fileIds = visibleMessages.flatMap((msg: any) => msg.contentId);
     const imageFiles = await File.find({
       _id: { $in: fileIds },
       type: "Other",
@@ -966,6 +1037,23 @@ export async function getOtherList(boxId: string) {
     return imageFiles;
   } catch (error) {
     console.error("Error get other list: ", error);
+    throw error;
+  }
+}
+
+export async function removeChatBox(boxId: string) {
+  try {
+    await connectToDatabase();
+    const message = await MessageBox.findById(boxId);
+    if (!message) {
+      throw new Error("Message not found");
+    }
+
+    await MessageBox.findByIdAndDelete(boxId);
+
+    return { success: true, message: "Message removed from database" };
+  } catch (error) {
+    console.error("Error remove messages from database: ", error);
     throw error;
   }
 }
@@ -991,6 +1079,111 @@ export async function getAllMessage() {
     return { success: true, messages: messagesWithContent };
   } catch (error) {
     console.error("Error fetching all messages: ", error);
+    throw error;
+  }
+}
+
+export async function findMessages(
+  boxId: string,
+  query: string,
+  userId: string
+) {
+  try {
+    await connectToDatabase();
+
+    const messageBox = await MessageBox.findById(boxId).populate("messageIds");
+    if (!messageBox) {
+      throw new Error("Box not found");
+    }
+    if (messageBox.messageIds.length === 0) {
+      return { success: false, messages: [] };
+    }
+
+    const messages = await Message.find({
+      _id: { $in: messageBox.messageIds },
+    }).populate({
+      path: "contentId",
+      model: "File",
+      select: "fileName description", // Select specific fields that you need
+      options: { strictPopulate: false },
+    });
+
+    const resultMessages: ResponseMessageDTO[] = messages
+      .filter((message) => {
+        const visibility = message.visibility;
+        if (visibility.has(userId) && visibility.get(userId) === false) {
+          console.log(
+            `Message with ID ${message._id} is not visible to userId ${userId}, skipping.`
+          );
+          return false; // Loại bỏ tin nhắn này
+        }
+
+        // console.log(messages, "this is message for check");
+
+        console.log(
+          visibility.has(userId) && visibility.get(userId) === false,
+          "messsage nay nek"
+        );
+        let content: string = "";
+
+        // Check if there's text to search
+        if (
+          message.text.length > 0 &&
+          message.contentId.length === 0 &&
+          visibility.has(userId) &&
+          visibility.get(userId) === true
+        ) {
+          // Use the last message.text if it's an array
+          content = message.text[message.text.length - 1];
+        }
+        // Handle contentId (file or description)
+        else if (
+          message.contentId.length > 0 &&
+          visibility.has(userId) &&
+          visibility.get(userId) === true
+        ) {
+          const contentId = message.contentId[message.contentId.length - 1]; // Use the last contentId
+
+          if ("fileName" in contentId) {
+            content = contentId.fileName; // For FileContent (File)
+          } else if ("description" in contentId) {
+            content = contentId.description || ""; // For GPSContent (description)
+          }
+        }
+
+        // Clean content: remove hidden characters, non-breaking spaces, and trim spaces
+        content = content.replace(/\u00A0/g, " ").trim();
+
+        // Debugging: Log the actual matched content and query
+        console.log("Query:", query);
+        console.log("Content:", content);
+
+        // Check if content is a valid string
+        if (typeof content !== "string") {
+          console.log("Content is not a string, skipping this message");
+          return false; // Skip this message if content is not a string
+        }
+
+        // Return true if the content matches the query
+        const isMatch = content.toLowerCase().includes(query.toLowerCase());
+        console.log(isMatch, "this is message match result");
+        return isMatch;
+      })
+      .map((message) => ({
+        id: message._id,
+        flag: message.flag,
+        isReact: message.isReact,
+        readedId: message.readedId,
+        contentId: message.contentId,
+        text: message.text,
+        boxId: message.boxId,
+        createAt: message.createAt,
+        createBy: message.createBy,
+      }));
+
+    return { success: true, messages: resultMessages };
+  } catch (error) {
+    console.error("Error searching messages: ", error);
     throw error;
   }
 }
@@ -1041,20 +1234,13 @@ export async function searchMessages(id?: string, query?: string) {
 
       const resultMessages = populatedMessages.filter((populatedMessage) => {
         let content: string = "";
-        if (
-          populatedMessage.text.length > 0 &&
-          populatedMessage.contentId.length === 0
-        ) {
+        if (populatedMessage.text.length > 0 && populatedMessage.contentId) {
           content = populatedMessage.text[populatedMessage.text.length - 1];
         } else {
-          const contentId =
-            populatedMessage.contentId[populatedMessage.contentId.length - 1];
+          const contentId = populatedMessage.contentId;
           if ("fileName" in contentId) {
             // contentId là FileContent
             content = contentId.fileName;
-          } else if ("description" in contentId) {
-            // contentId là GPSContent
-            content = contentId.description ? contentId.description : "";
           }
         }
         return content

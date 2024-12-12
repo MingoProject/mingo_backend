@@ -1,4 +1,4 @@
-import { getVideoList } from "@/lib/actions/message.action";
+import { fetchMessage, findMessages } from "@/lib/actions/message.action";
 import corsMiddleware, {
   authenticateToken,
 } from "@/middleware/auth-middleware";
@@ -14,15 +14,19 @@ export default async function handler(
         try {
           if (req.user && req.user.id) {
             const { boxId } = req.query;
+            const { query } = req.query;
             const userId = req.user.id.toString();
             if (!boxId) {
               return res
                 .status(400)
                 .json({ message: "chatId or groupId is required" });
             }
-
-            const result = await getVideoList(
+            if (!query) {
+              return res.status(400).json({ message: "userId is required" });
+            }
+            const result = await findMessages(
               boxId as string,
+              query as string,
               userId as string
             );
             res.status(200).json(result);
@@ -32,7 +36,7 @@ export default async function handler(
             });
           }
         } catch (error) {
-          console.error("Error fetching video messages: ", error);
+          console.error("Error find messages: ", error);
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error occurred";
           res
