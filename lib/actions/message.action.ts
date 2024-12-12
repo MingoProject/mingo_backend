@@ -283,6 +283,7 @@ export async function createMessage(
         flag: true,
         pin: false,
         createBy: userObjectId,
+        status: true,
       });
       const pusherMessage: ResponseMessageDTO = {
         id: populatedMessage._id.toString(),
@@ -348,6 +349,7 @@ export async function createGroup(
     flag: true,
     pin: false,
     createBy: userObjectId,
+    status: true,
   });
   // return { success: true, messageBoxId: messageBox._id, messageBox };
   return { success: true, message: "Create group successfully" };
@@ -651,6 +653,105 @@ export async function markMessageAsRead(boxId: string, userId: string) {
   }
 }
 
+// export async function fetchBoxChat(userId: string) {
+//   try {
+//     await connectToDatabase();
+
+//     const messageBoxes = await MessageBox.find({
+//       $and: [{ receiverIds: { $in: [userId] } }, { receiverIds: { $size: 2 } }],
+//     }).populate(
+//       "receiverIds",
+//       "firstName lastName nickName avatar phoneNumber"
+//     );
+
+//     if (!messageBoxes.length) {
+//       return {
+//         success: false,
+//         box: "No message boxes found for this userId",
+//       };
+//     }
+
+//     // Xử lý từng box để lấy tin nhắn cuối và kiểm tra trạng thái đọc
+//     const messageBoxesWithDetails: MessageBoxDTO[] = await Promise.all(
+//       messageBoxes.map(async (messageBox) => {
+//         // Lọc những messageIds có visibility của userId là true
+//         const filteredMessageIds = await Promise.all(
+//           messageBox.messageIds.map(async (messageId: any) => {
+//             const message = await Message.findById(messageId).select(
+//               "visibility"
+//             );
+//             return message?.visibility?.get(userId) === true ? messageId : null;
+//           })
+//         );
+
+//         // Lọc bỏ các null values trong mảng
+//         const validMessageIds = filteredMessageIds.filter((id) => id !== null);
+
+//         // Lấy tin nhắn cuối cùng từ danh sách hợp lệ
+//         const lastMessageId = validMessageIds[validMessageIds.length - 1];
+
+//         if (!lastMessageId) {
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: null,
+//             readStatus: false,
+//           };
+//         }
+
+//         // Lấy thông tin tin nhắn cuối
+//         const lastMessage = await Message.findById(lastMessageId).populate({
+//           path: "contentId",
+//           model: "File",
+//           options: { strictPopulate: false },
+//         });
+
+//         if (!lastMessage) {
+//           return {
+//             ...messageBox.toObject(),
+//             lastMessage: null,
+//             readStatus: false,
+//           };
+//         }
+
+//         // Kiểm tra trạng thái đã đọc
+//         const isRead = lastMessage.readedId.includes(userId);
+//         const readStatus = isRead ? true : false;
+
+//         const responseLastMessage: ResponseMessageDTO = {
+//           id: lastMessage._id,
+//           flag: lastMessage.flag,
+//           isReact: lastMessage.isReact,
+//           readedId: lastMessage.readedId,
+//           contentId: lastMessage.flag
+//             ? lastMessage.contentId[lastMessage.contentId.length - 1]
+//             : undefined,
+//           text: lastMessage.flag
+//             ? lastMessage.text[lastMessage.text.length - 1]
+//             : "Message revoked",
+//           boxId: lastMessage.boxId.toString(),
+//           createAt: lastMessage.createAt,
+//           createBy: lastMessage.createBy,
+//         };
+
+//         return {
+//           ...messageBox.toObject(),
+//           responseLastMessage,
+//           readStatus,
+//         };
+//       })
+//     );
+
+//     return {
+//       success: true,
+//       box: messageBoxesWithDetails,
+//       adminId: userId,
+//     };
+//   } catch (error) {
+//     console.error("Error fetching messages: ", error);
+//     throw error;
+//   }
+// }
+
 export async function fetchBoxChat(userId: string) {
   try {
     await connectToDatabase();
@@ -664,15 +765,15 @@ export async function fetchBoxChat(userId: string) {
 
     if (!messageBoxes.length) {
       return {
-        success: false,
-        box: "No message boxes found for this userId",
+        success: true,
+        box: [],
       };
     }
 
-    // Xử lý từng box để lấy tin nhắn cuối và kiểm tra trạng thái đọc
+    // Process each message box and retrieve the last message
     const messageBoxesWithDetails: MessageBoxDTO[] = await Promise.all(
       messageBoxes.map(async (messageBox) => {
-        // Lọc những messageIds có visibility của userId là true
+        // Filter messages with visibility true for the userId
         const filteredMessageIds = await Promise.all(
           messageBox.messageIds.map(async (messageId: any) => {
             const message = await Message.findById(messageId).select(
@@ -682,10 +783,10 @@ export async function fetchBoxChat(userId: string) {
           })
         );
 
-        // Lọc bỏ các null values trong mảng
+        // Filter out null values
         const validMessageIds = filteredMessageIds.filter((id) => id !== null);
 
-        // Lấy tin nhắn cuối cùng từ danh sách hợp lệ
+        // Get the last valid message
         const lastMessageId = validMessageIds[validMessageIds.length - 1];
 
         if (!lastMessageId) {
@@ -696,7 +797,7 @@ export async function fetchBoxChat(userId: string) {
           };
         }
 
-        // Lấy thông tin tin nhắn cuối
+        // Fetch the last message details
         const lastMessage = await Message.findById(lastMessageId).populate({
           path: "contentId",
           model: "File",
@@ -711,7 +812,7 @@ export async function fetchBoxChat(userId: string) {
           };
         }
 
-        // Kiểm tra trạng thái đã đọc
+        // Check if the message is read
         const isRead = lastMessage.readedId.includes(userId);
         const readStatus = isRead ? true : false;
 
@@ -739,6 +840,18 @@ export async function fetchBoxChat(userId: string) {
       })
     );
 
+    // Sort message boxes by the last message's creation date (createAt) in descending order
+    messageBoxesWithDetails.sort((a, b) => {
+      const dateA = a.lastMessage?.createAt
+        ? new Date(a.lastMessage.createAt).getTime()
+        : 0; // Default to 0 if undefined
+      const dateB = b.lastMessage?.createAt
+        ? new Date(b.lastMessage.createAt).getTime()
+        : 0; // Default to 0 if undefined
+      return dateB - dateA; // Sort in descending order (most recent first)
+    });
+
+    console.log(messageBoxesWithDetails.map((item) => item.receiverIds));
     return {
       success: true,
       box: messageBoxesWithDetails,
