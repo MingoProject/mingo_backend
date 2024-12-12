@@ -388,7 +388,7 @@ export async function unBlock(param: FriendRequestDTO) {
       { $pull: { blockedIds: param.receiver } }
     );
     await stUser.save();
-    return { message: "UnBFF successfully!" };
+    return { message: "Unblock successfully!" };
   } catch (error) {
     console.log(error);
     throw error;
