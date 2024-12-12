@@ -17,7 +17,8 @@ export default async function handler(
         try {
           if (req.user && req.user.id) {
             const { boxId } = req.query;
-            const userId = req.user.id.toString();
+            const { userId } = req.query;
+            //const userId = req.user.id.toString();
 
             if (!boxId) {
               return res.status(400).json({ message: "boxId is required" });
