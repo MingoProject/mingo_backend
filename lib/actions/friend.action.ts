@@ -275,34 +275,6 @@ export async function unFriend(param: FriendRequestDTO) {
 
 export async function block(param: FriendRequestDTO) {
   try {
-    // await connectToDatabase();
-    // const [stUser, ndUser] = [param.sender, param.receiver].sort();
-    // await isUserExists(param.sender);
-    // await isUserExists(param.receiver);
-    // const existedBlockRelation = await Relation.findOne({
-    //   stUser: stUser,
-    //   ndUser: ndUser,
-    //   relation: "block",
-    //   status: true,
-    // });
-    // if (existedBlockRelation) {
-    //   return { message: "you have been blocked them!" };
-    // }
-    // await Relation.create({
-    //   stUser: stUser,
-    //   ndUser: ndUser,
-    //   relation: "block",
-    //   sender: param.sender,
-    //   receiver: param.receiver,
-    //   status: true,
-    //   createBy: param.sender,
-    // });
-    // const user = await User.findById(param.sender);
-
-    // await user.blockedIds.addToSet(param.receiver);
-    // await user.save();
-    // await unFriend(param);
-    // return { message: `Block ${param.receiver} successfully!` };
     await connectToDatabase();
     const [stUser, ndUser] = [param.sender, param.receiver].sort();
     await isUserExists(param.sender);
@@ -416,6 +388,7 @@ export async function unBlock(param: FriendRequestDTO) {
       { $pull: { blockedIds: param.receiver } }
     );
     await stUser.save();
+    return { message: "UnBFF successfully!" };
   } catch (error) {
     console.log(error);
     throw error;
