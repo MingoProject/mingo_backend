@@ -423,7 +423,7 @@ export async function editMessage(
 export async function deleteOrRevokeMessage(
   messageId: string,
   userId: string,
-  action: "revoke" | "delete"
+  action: "revoke" | "delete" | "unsend"
 ) {
   try {
     await connectToDatabase();
@@ -479,6 +479,32 @@ export async function deleteOrRevokeMessage(
         )
         .catch((error) => console.error("Failed to delete message:", error));
       return { success: true, message: "Message deleted" };
+    } else if (action == "unsend") {
+      if (Array.isArray(message.readedId)) {
+        message.readedId.forEach((receiverId: any) => {
+          message.visibility.set(receiverId.toString(), false); // Đảm bảo receiverId là chuỗi
+        });
+      } else {
+        throw new Error("Receivers list is invalid");
+      }
+      await message.save();
+      const pusherMessage: PusherDelete = {
+        id: message._id.toString(),
+        flag: false,
+        visibility: false,
+        isReact: message.isReact,
+        text: "Message unsend",
+        boxId: message.boxId.toString(),
+        action: "unsend",
+        createAt: new Date().toISOString(),
+        createBy: userId,
+      };
+
+      await pusherServer
+        .trigger(`private-${message.boxId}`, "unsend-message", pusherMessage)
+        .then(() => console.log("Message unsend successfully: ", pusherMessage))
+        .catch((error) => console.error("Failed to unsend message:", error));
+      return { success: true, message: "Message unsend" };
     } else {
       throw new Error("Invalid action");
     }

@@ -433,7 +433,10 @@ export async function getCommentById(
     const comment = await Comment.findById(commentId)
       .populate("userId", "firstName lastName avatar")
       .populate("replies")
-      .populate("likes");
+      .populate("likes")
+      .populate("content")
+      .populate("createAt")
+      .populate("createBy");
     if (comment?.parentId) {
       await comment.populate("parentId");
     }
