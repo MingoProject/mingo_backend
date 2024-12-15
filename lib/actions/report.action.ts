@@ -3,7 +3,7 @@ import Report from "@/database/report.model"; // Import model Report
 import mongoose, { Schema } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
-import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/ReportDTO";
+import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/reportDTO";
 
 export async function createReport(
   params: ReportCreateDTO,

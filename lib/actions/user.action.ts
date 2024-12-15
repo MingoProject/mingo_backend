@@ -13,7 +13,7 @@ import {
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
 import bcrypt from "bcrypt";
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 import { PostResponseDTO } from "@/dtos/PostDTO";
 import Post from "@/database/post.model";
 import cloudinary from "@/cloudinary";
@@ -64,6 +64,7 @@ export async function createUser(
       attendDate: new Date(),
       roles: ["user"],
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+      status: false,
     });
 
     const newUser: UserResponseDTO = await User.create(createUserData);
@@ -328,20 +329,17 @@ export async function getMyBffs(id: String | undefined) {
   try {
     connectToDatabase();
 
-    // Tìm user và chỉ lấy friendIds
     const user = await User.findById(id).select("bestFriendIds");
 
     if (!user || !Array.isArray(user.bestFriendIds)) {
       console.log(`Cannot get ${id} bestFriends now`);
       throw new Error(`Cannot get ${id} bestFriends now`);
     }
-
-    // Truy vấn danh sách bạn bè dựa trên bestFriendIds
     const bestFriends = await User.find({
-      _id: { $in: user.bestFriendIds }, // Lấy danh sách bạn bè theo ObjectId
+      _id: { $in: user.bestFriendIds },
     });
 
-    console.log(bestFriends); // Kiểm tra danh sách bạn bè
+    console.log(bestFriends);
     return bestFriends;
   } catch (error) {
     console.error(error);
@@ -373,7 +371,7 @@ export async function getMyFollowings(id: String | undefined) {
   }
 }
 
-export async function getMyFollower(id: String | undefined) {
+export async function getMyFollowers(id: String | undefined) {
   try {
     connectToDatabase();
 
@@ -531,6 +529,127 @@ export async function getMyVideos(id: String | undefined) {
     });
 
     return images;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function updateStatus(id: string | undefined) {
+  try {
+    connectToDatabase();
+
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      throw new Error("User not found!");
+    }
+
+    const newStatus = !existingUser.status;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { status: newStatus },
+      { new: true }
+    );
+
+    return { status: true, newProfile: updatedUser };
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function savePost(
+  postId: string,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    await connectToDatabase();
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      throw new Error("Bài viết không tồn tại.");
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { saveIds: new Types.ObjectId(postId) } },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new Error("Người dùng không tồn tại.");
+    }
+
+    return user;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function unsavePost(
+  postId: string,
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    connectToDatabase();
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $pull: { saveIds: new Types.ObjectId(postId) }, // Xóa bài viết khỏi danh sách
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new Error("Người dùng không tồn tại.");
+    }
+
+    return user;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
+export async function getMySavedPosts(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    const user = await User.findById(id).select("saveIds");
+
+    if (!user || !Array.isArray(user.saveIds)) {
+      console.log(`Cannot get ${id} saves now`);
+      throw new Error(`Cannot get ${id} saves now`);
+    }
+    const savedPosts = await Post.find({
+      _id: { $in: user.saveIds },
+    });
+
+    return savedPosts;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function getMyLikedPosts(id: String | undefined) {
+  try {
+    connectToDatabase();
+
+    const user = await User.findById(id).select("likeIds");
+
+    if (!user || !Array.isArray(user.likeIds)) {
+      console.log(`Cannot get ${id} saves now`);
+      throw new Error(`Cannot get ${id} saves now`);
+    }
+    const likedPosts = await Post.find({
+      _id: { $in: user.likeIds },
+    });
+
+    return likedPosts;
   } catch (error) {
     console.error(error);
     throw error;

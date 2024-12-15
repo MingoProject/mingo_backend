@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getMyFollower, getMyFollowings } from "@/lib/actions/user.action"; // Import the function from your actions
+import { getMyLikedPosts } from "@/lib/actions/user.action";
 import corsMiddleware from "@/middleware/auth-middleware";
 
 export default async function handler(
@@ -15,12 +15,12 @@ export default async function handler(
           return res.status(400).json({ message: "User ID is required" });
         }
 
-        const userFollowings = await getMyFollower(userId as string);
+        const saves = await getMyLikedPosts(userId as string);
 
-        return res.status(200).json(userFollowings);
+        return res.status(200).json(saves);
       } catch (error) {
         console.error(error);
-        return res.status(500).json({ message: "Failed to retrieve follower" });
+        return res.status(500).json({ message: "Failed to retrieve saves" });
       }
     } else {
       return res.status(405).json({ message: "Method not allowed" });
