@@ -12,7 +12,6 @@ import {
   DetailMessageBoxDTO,
   ResponseMessageBoxDTO,
   ResponseMessageDTO,
-  PusherDeleteAndRevoke,
   PusherRevoke,
   PusherDelete,
 } from "@/dtos/MessageDTO";
@@ -663,6 +662,8 @@ export async function markMessageAsRead(boxId: string, userId: string) {
         })
       );
 
+      console.log(lastMessage, "this is last message");
+
       return {
         success: true,
         messages: "Messages marked as read",
@@ -1032,7 +1033,7 @@ export async function fetchBoxGroup(userId: string) {
             : "Message revoked",
           boxId: populatedMessage.boxId.toString(),
           createAt: populatedMessage.createAt,
-          createBy: populatedMessage.createBy,
+          createBy: populatedMessage.createBy, // Lấy ID của createBy
         };
 
         return {
@@ -1061,12 +1062,12 @@ export async function getImageList(boxId: string, userId: string) {
     const messages: ResponseMessageDTO[] = await Message.find({
       _id: { $in: messageBox.messageIds },
     })
-      .select("contentId visibility")
+      .select("contentId visibility flag")
       .exec();
 
     // Lọc các message mà visibility của userId là true
     const visibleMessages = messages.filter((msg: any) => {
-      return msg.visibility?.get(userId) === true;
+      return msg.visibility?.get(userId) === true && msg.flag === true;
     });
 
     // Lấy danh sách contentId từ các message phù hợp
@@ -1098,7 +1099,7 @@ export async function getVideoList(boxId: string, userId: string) {
     const messages: ResponseMessageDTO[] = await Message.find({
       _id: { $in: messageBox.messageIds },
     })
-      .select("contentId visibility")
+      .select("contentId visibility flag")
       .exec();
 
     // Lọc các message mà visibility của userId là true
