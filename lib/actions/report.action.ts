@@ -1,8 +1,9 @@
 // actions/report.action.ts
 import Report from "@/database/report.model"; // Import model Report
-import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/reportDTO"; // DTO cho báo cáo
 import mongoose, { Schema } from "mongoose";
 import { connectToDatabase } from "../mongoose";
+import User from "@/database/user.model";
+import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/ReportDTO";
 
 export async function createReport(
   params: ReportCreateDTO,
@@ -16,11 +17,11 @@ export async function createReport(
       title: params.title || "",
       content: params.content,
       reportedId: params.reportedId,
+      createdById: params.createdById, // ID của người tạo báo cáo
       reportedEntityId: params.reportedEntityId,
       entityType: params.entityType,
-      status: "pending", // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
+      status: 0, // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
       createdAt: new Date(),
-      createdById: createBy ? createBy : new mongoose.Types.ObjectId(), // ID của người tạo báo cáo
       attachments: params.attachments || [], // Các file đính kèm (nếu có)
       proofs: params.proofs || [], // Các bằng chứng (nếu có)
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
@@ -38,14 +39,14 @@ export async function createReport(
 
 export async function updateReportStatus(
   reportId: string,
-  status: "done" | "reject",
+  status: 1 | 2,
   updatedBy: Schema.Types.ObjectId | undefined
 ): Promise<ReportResponseDTO> {
   try {
     await connectToDatabase();
 
     // Kiểm tra trạng thái hợp lệ
-    const validStatuses = ["done", "reject"];
+    const validStatuses = [1, 2];
     if (!validStatuses.includes(status)) {
       throw new Error(
         "Invalid status value. Allowed values are 'done' or 'reject'."
@@ -79,9 +80,52 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
     await connectToDatabase();
 
     // Lấy tất cả báo cáo từ cơ sở dữ liệu
-    const reports = await Report.find({}).sort({ createdAt: -1 }).exec(); // Sắp xếp giảm dần theo ngày tạo
+    const reports = await Report.find({})
+      .populate({
+        path: "createdById",
+        model: User,
+        select: "firstName lastName email avatar phoneNumber gender birthDay",
+      })
+      .populate({
+        path: "reportedId",
+        model: User,
+        select: "firstName lastName email avatar phoneNumber gender birthDay",
+      })
+      .sort({ createdAt: -1 })
+      .exec(); // Sắp xếp giảm dần theo ngày tạo
 
-    return reports as ReportResponseDTO[];
+    const reportDTOs: ReportResponseDTO[] = reports.map((report) => ({
+      _id: report._id,
+      title: report.title,
+      content: report.content,
+      createdById: {
+        id: report.createdById._id,
+        firstName: report.createdById.firstName,
+        lastName: report.createdById.lastName,
+        avatar: report.createdById.avatar,
+        dob: report.createdById.birthDay,
+        phoneNumber: report.createdById.phoneNumber,
+        email: report.createdById.email,
+        gender: report.createdById.gender,
+      },
+      reportedId: {
+        id: report.reportedId._id,
+        firstName: report.reportedId.firstName,
+        lastName: report.reportedId.lastName,
+        avatar: report.reportedId.avatar,
+        dob: report.reportedId.birthDay,
+        phoneNumber: report.reportedId.phoneNumber,
+        email: report.reportedId.email,
+        gender: report.reportedId.gender,
+      },
+      reportedEntityId: report.reportedEntityId,
+      entityType: report.entityType,
+      status: report.status,
+      createdAt: report.createdAt,
+      attachments: report.attachments || [],
+      proofs: report.proofs || [],
+    }));
+    return reportDTOs;
   } catch (error) {
     console.error("Error fetching reports:", error);
     throw new Error("Error fetching reports: " + error);
