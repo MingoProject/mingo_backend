@@ -49,6 +49,9 @@ export interface UserResponseDTO {
   postIds: Schema.Types.ObjectId[];
   createAt: Date;
   createBy: Schema.Types.ObjectId;
+  status: Boolean;
+  saveIds: Schema.Types.ObjectId[];
+  likeIds: Schema.Types.ObjectId[];
 }
 
 export interface UpdateUserDTO {
