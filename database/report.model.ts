@@ -9,7 +9,7 @@ export interface IReport extends Document, IAudit {
   reportedId: Schema.Types.ObjectId; // Người bị báo cáo
   reportedEntityId: Schema.Types.ObjectId; // ID của thực thể được báo cáo
   entityType: string; // Loại thực thể được báo cáo ("post", "user", etc.)
-  status: string; // Trạng thái báo cáo ("pending", etc.)
+  status: number; // Trạng thái báo cáo ("pending", etc.)
   createdAt: Date; // Thời gian tạo báo cáo
   attachments?: string[]; // Các file đính kèm
   proofs?: string[]; // Các bằng chứng
@@ -47,8 +47,8 @@ const ReportSchema = new Schema<IReport>(
       required: true,
     },
     status: {
-      type: String,
-      default: "pending",
+      type: Number,
+      default: 0,
     },
     createdAt: {
       type: Date,
