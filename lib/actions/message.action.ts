@@ -1415,3 +1415,80 @@ export async function searchMessages(id?: string, query?: string) {
     throw error;
   }
 }
+
+export async function fetchManagementBoxChat() {
+  try {
+    await connectToDatabase();
+
+    const messageBoxes = await MessageBox.find({}).populate(
+      "receiverIds",
+      "firstName lastName avatar "
+    );
+
+    if (!messageBoxes.length) {
+      return {
+        success: true,
+        box: [],
+      };
+    }
+
+    return {
+      success: true,
+      box: messageBoxes,
+    };
+  } catch (error) {
+    console.error("Error fetching messages: ", error);
+    throw error;
+  }
+}
+
+export async function fetchManagementMessage(boxId: string) {
+  try {
+    await connectToDatabase();
+
+    // Tìm kiếm MessageBox và populate các messageIds
+    const messageBox = await MessageBox.findById(boxId).populate("messageIds");
+
+    if (!messageBox) {
+      throw new Error("MessageBox not found");
+    }
+
+    // Lọc các tin nhắn có visibility là true đối với userId
+    const messagesWithContent: ResponseMessageDTO[] = await Promise.all(
+      messageBox.messageIds.map(async (messageId: any) => {
+        // Populate nội dung của tin nhắn
+        const populatedMessage = await messageId.populate({
+          path: "contentId",
+          model: "File",
+          select: "",
+          options: { strictPopulate: false },
+        });
+
+        // Tạo DTO cho tin nhắn với nội dung đã populate
+        const responseMessage: ResponseMessageDTO = {
+          id: populatedMessage._id,
+          flag: populatedMessage.flag,
+          isReact: populatedMessage.isReact,
+          readedId: populatedMessage.readedId,
+          contentId: populatedMessage.flag
+            ? populatedMessage.contentId[populatedMessage.contentId.length - 1]
+            : undefined,
+          text: populatedMessage.text[populatedMessage.text.length - 1],
+          boxId: populatedMessage.boxId.toString(),
+          createAt: populatedMessage.createAt,
+          createBy: populatedMessage.createBy,
+        };
+
+        return responseMessage;
+      })
+    );
+
+    // Lọc bỏ các tin nhắn không hợp lệ (null)
+    const validMessages = messagesWithContent.filter(Boolean);
+
+    return { success: true, messages: validMessages };
+  } catch (error) {
+    console.error("Error fetching messages: ", error);
+    throw error;
+  }
+}

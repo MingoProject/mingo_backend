@@ -35,9 +35,6 @@ export default async function handler(
       try {
         // Gọi action để lấy danh sách báo cáo
         const reports = await getAllReports();
-
-        console.log(reports);
-
         return res.status(200).json(reports);
       } catch (error) {
         console.error("Error fetching reports:", error);

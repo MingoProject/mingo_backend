@@ -1,4 +1,5 @@
 import { Schema } from "mongoose";
+import { UserInfor } from "@/dtos/ReportDTO";
 
 export interface PostCreateDTO {
   content: string;
@@ -31,6 +32,26 @@ export interface PostResponseDTO {
   };
   likedIds: Schema.Types.ObjectId[];
   flag: boolean;
+}
+
+export interface MangementPostResponseDTO {
+  userId: UserInfor;
+  postId: string;
+  content: string;
+  createAt: Date;
+  location: string;
+  tag: { id: string; avatar: string }[];
+  privacy: string;
+  attachment: { id: string; src: string }[];
+  like: { id: string; avatar: string }[];
+  share: { id: string; avatar: string }[];
+  comment: {
+    commentId: string;
+    author: { id: string; firstName: string; lastName: string };
+    createAt: Date;
+    content: string;
+    parentComment?: string;
+  }[];
 }
 
 export interface PostYouLikeDTO {
