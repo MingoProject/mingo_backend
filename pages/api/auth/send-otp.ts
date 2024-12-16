@@ -1,12 +1,14 @@
 import { sendSMS } from "@/lib/actions/authentication.action";
-import { authenticateToken } from "@/middleware/auth-middleware";
+import corsMiddleware, {
+  authenticateToken,
+} from "@/middleware/auth-middleware";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  authenticateToken(req, res, async () => {
+  corsMiddleware(req, res, async () => {
     if (req.method === "POST") {
       const { phoneNumber } = req.body;
 

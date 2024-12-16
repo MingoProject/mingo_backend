@@ -1,52 +1,60 @@
 import OTP from "@/database/otp.model";
 import { connectToDatabase } from "../mongoose";
 import jwt from "jsonwebtoken";
+import axios from "axios";
 
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
-}
+const formatPhoneNumber = (phoneNumber: string): string => {
+  if (phoneNumber.startsWith("0")) {
+    return "+84" + phoneNumber.slice(1);
+  }
+  if (phoneNumber.startsWith("+84")) {
+    return phoneNumber;
+  }
+  throw new Error("Invalid phone number format");
+};
 
-export async function sendSMS(phoneNumber: string) {
+export const sendSMS = async (phoneNumber: string) => {
+  const OTP = Math.floor(100000 + Math.random() * 900000);
+  const API_KEY =
+    "9b711f8223b2abb560e2bee66b08e9b5-1fc5ccf0-7349-4d96-a97f-b14f3ae45de6";
+  const BASE_URL = "https://wglmk8.api.infobip.com";
+
   try {
-    const otp = generateOTP();
-    const myHeaders = new Headers();
-    myHeaders.append("Authorization", `App ${process.env.INFOBIP_APIKEY}`);
-    myHeaders.append("Content-Type", "application/json");
-    myHeaders.append("Accept", "application/json");
-
-    const raw = JSON.stringify({
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+    const data = {
       messages: [
         {
-          destinations: [{ to: phoneNumber }],
-          from: process.env.SENDER_PHONENUMBER,
-          text: `Your verification code is ${otp}`,
+          from: "Mingo",
+          destinations: [
+            {
+              to: formattedPhoneNumber,
+            },
+          ],
+          text: `Your OTP code is: ${OTP}`,
         },
       ],
+    };
+
+    const response = await axios.post(`${BASE_URL}/sms/2/text/advanced`, data, {
+      headers: {
+        Authorization: `App ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
     });
 
-    fetch("https://api.infobip.com/sms/2/text/advanced", {
-      method: "POST",
-      headers: myHeaders,
-      body: raw,
-      redirect: "follow",
-    })
-      .then((response) => response.text())
-      .then((result) => console.log(result))
-      .catch((error) => console.error(error));
-
-    connectToDatabase();
-    const createdOTP = await OTP.create({
-      code: otp,
-      sender: process.env.SENDER_PHONENUMBER,
-      receiver: phoneNumber,
-    });
-
-    return createdOTP;
-  } catch (error) {
-    console.log(error);
-    throw error;
+    return {
+      otp: OTP,
+      message: "OTP sent successfully",
+      response: response.data,
+    };
+  } catch (error: any) {
+    console.error(
+      "Error sending SMS via Infobip:",
+      error.response?.data || error.message
+    );
+    throw new Error("Failed to send OTP");
   }
-}
+};
 
 export async function checkToken(rareToken: string) {
   try {

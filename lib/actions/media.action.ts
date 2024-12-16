@@ -121,6 +121,7 @@ export const getCommentsByMediaId = async (
           replies: comment.replies,
           createBy: comment.createBy,
           createAt: comment.createdAt,
+          parentid: comment.parentId,
         };
       }
     );
@@ -249,10 +250,13 @@ export async function getMediaById(
   try {
     await connectToDatabase();
 
-    const media = await Media.findById(mediaId)
-      .populate("createBy", "firstName lastName avatar _id")
-      .populate("likes")
-      .populate("comments");
+    const media = await Media.findById(mediaId).populate(
+      "createBy",
+      "firstName lastName avatar _id"
+    );
+    // .populate("likes")
+    // .populate("comments")
+    // .populate("shares");
 
     if (!media) {
       throw new Error("media not found");

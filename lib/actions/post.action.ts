@@ -216,6 +216,7 @@ export const getCommentsByPostId = async (
         replies: comment.replies,
         createBy: comment.createBy,
         createAt: comment.createdAt,
+        parentId: comment.parentId,
       };
     });
 

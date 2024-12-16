@@ -75,6 +75,26 @@ export async function createUser(
   }
 }
 
+export const changePassword = async (
+  userId: Schema.Types.ObjectId | undefined,
+  currentPassword: string,
+  newPassword: string
+) => {
+  console.log(userId);
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error("User not found!");
+  }
+  const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isPasswordValid) {
+    throw new Error("Current password is incorrect!");
+  }
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+  user.password = hashedPassword;
+  await user.save();
+  return { message: "Password updated successfully" };
+};
+
 export async function createAdmin(
   params: UserRegisterDTO,
   createBy: Schema.Types.ObjectId | undefined
@@ -506,7 +526,7 @@ export async function getMyImages(id: String | undefined) {
     const images = await Media.find({
       type: "image",
       createBy: id,
-    });
+    }).select("url _id");
 
     return images;
   } catch (error) {
@@ -526,7 +546,7 @@ export async function getMyVideos(id: String | undefined) {
     const images = await Media.find({
       type: "video",
       createBy: id,
-    });
+    }).select("url _id");
 
     return images;
   } catch (error) {
@@ -626,7 +646,9 @@ export async function getMySavedPosts(id: String | undefined) {
     }
     const savedPosts = await Post.find({
       _id: { $in: user.saveIds },
-    });
+    })
+      .populate("author", "firstName lastName _id avatar") // Populate các trường firstName, lastName và _id của author
+      .exec();
 
     return savedPosts;
   } catch (error) {
@@ -647,7 +669,9 @@ export async function getMyLikedPosts(id: String | undefined) {
     }
     const likedPosts = await Post.find({
       _id: { $in: user.likeIds },
-    });
+    })
+      .populate("author", "firstName lastName _id avatar") // Populate các trường firstName, lastName và _id của author
+      .exec();
 
     return likedPosts;
   } catch (error) {
