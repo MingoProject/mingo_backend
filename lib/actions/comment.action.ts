@@ -35,6 +35,7 @@ export async function createComment(
       userId: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
       replies: params.replies || [],
+      parentId: null,
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -56,9 +57,10 @@ export async function createComment(
   }
 }
 
-export async function createReplyComment(
+export async function createReplyCommentPost(
   params: CreateCommentDTO,
-  createBy: Schema.Types.ObjectId | undefined
+  createBy: Schema.Types.ObjectId | undefined,
+  postId: string
 ) {
   try {
     connectToDatabase();
@@ -73,6 +75,48 @@ export async function createReplyComment(
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
+
+    await Post.findByIdAndUpdate(
+      postId,
+      {
+        $push: { comments: newComment._id },
+      },
+      { new: true }
+    );
+
+    return newComment;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function createReplyCommentMedia(
+  params: CreateCommentDTO,
+  createBy: Schema.Types.ObjectId | undefined,
+  mediaId: string
+) {
+  try {
+    connectToDatabase();
+
+    const newComment = await Comment.create({
+      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      content: params.content,
+      replies: params.replies || [],
+      parentId: params.parentId || null,
+      likes: [],
+      createdAt: new Date(),
+      createdTime: new Date(),
+      createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+    });
+
+    await Media.findByIdAndUpdate(
+      mediaId,
+      {
+        $push: { comments: newComment._id },
+      },
+      { new: true }
+    );
 
     return newComment;
   } catch (error) {
@@ -212,6 +256,9 @@ export async function getAuthorByCommentId(
       postIds: author.postIds,
       createAt: author.createdAt,
       createBy: author.createBy,
+      status: author.status,
+      saveIds: author.saveIds,
+      likeIds: author.likeIds,
     };
 
     return authorDTO;
@@ -341,6 +388,7 @@ export async function createCommentMedia(
       createdAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+      parentId: null,
     });
 
     const media = await Media.findByIdAndUpdate(
@@ -362,7 +410,6 @@ export async function deleteCommentMedia(commentId: string, mediaId: string) {
   try {
     connectToDatabase();
 
-    // Xóa comment khỏi Comment model
     const deleteComment = await Comment.findByIdAndDelete(commentId);
     if (!deleteComment) {
       return {
@@ -371,11 +418,10 @@ export async function deleteCommentMedia(commentId: string, mediaId: string) {
       };
     }
 
-    // Cập nhật Post để xóa comment khỏi danh sách comments
     await Media.findByIdAndUpdate(
       mediaId,
       {
-        $pull: { comments: commentId }, // Xóa commentId khỏi array comments
+        $pull: { comments: commentId },
       },
       { new: true }
     );
@@ -433,10 +479,10 @@ export async function getCommentById(
     const comment = await Comment.findById(commentId)
       .populate("userId", "firstName lastName avatar")
       .populate("replies")
-      .populate("likes")
-      .populate("content")
-      .populate("createAt")
-      .populate("createBy");
+      .populate("likes");
+    // .populate("content")
+    // .populate("createAt")
+    // .populate("createBy");
     if (comment?.parentId) {
       await comment.populate("parentId");
     }

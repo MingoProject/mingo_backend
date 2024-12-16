@@ -54,3 +54,21 @@ export const deleteNotification = async (notificationId: string) => {
     throw error;
   }
 };
+
+export const getNotification = async (
+  senderId: string,
+  receiverId: string,
+  type: string
+) => {
+  try {
+    const notification = await Notification.findOne({
+      senderId,
+      receiverId,
+      type,
+    }).select("_id");
+
+    return notification;
+  } catch (error: any) {
+    throw new Error(`Error fetching notifications: ${error.message}`);
+  }
+};
