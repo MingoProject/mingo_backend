@@ -3,7 +3,7 @@ import Report from "@/database/report.model"; // Import model Report
 import mongoose, { Schema } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
-import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/reportDTO";
+import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/ReportDTO";
 
 export async function createReport(
   params: ReportCreateDTO,
@@ -37,10 +37,47 @@ export async function createReport(
   }
 }
 
+// export async function updateReportStatus(
+//   reportId: string,
+//   status: 1 | 2,
+//   updatedBy: Schema.Types.ObjectId | undefined
+// ): Promise<ReportResponseDTO> {
+//   try {
+//     await connectToDatabase();
+
+//     // Kiểm tra trạng thái hợp lệ
+//     const validStatuses = [1, 2];
+//     if (!validStatuses.includes(status)) {
+//       throw new Error(
+//         "Invalid status value. Allowed values are 'done' or 'reject'."
+//       );
+//     }
+
+//     // Tìm và cập nhật báo cáo
+//     const updatedReport = await Report.findByIdAndUpdate(
+//       reportId,
+//       {
+//         status: status,
+//         updatedAt: new Date(),
+//         updatedById: updatedBy || new mongoose.Types.ObjectId(), // ID của người cập nhật
+//       },
+//       { new: true } // Trả về báo cáo đã cập nhật
+//     );
+
+//     if (!updatedReport) {
+//       throw new Error("Report not found");
+//     }
+
+//     return updatedReport as ReportResponseDTO;
+//   } catch (error) {
+//     console.error("Error updating report status:", error);
+//     throw new Error("Error updating report status: " + error);
+//   }
+// }
+
 export async function updateReportStatus(
   reportId: string,
-  status: 1 | 2,
-  updatedBy: Schema.Types.ObjectId | undefined
+  status: 1 | 2
 ): Promise<ReportResponseDTO> {
   try {
     await connectToDatabase();
@@ -53,13 +90,12 @@ export async function updateReportStatus(
       );
     }
 
-    // Tìm và cập nhật báo cáo
     const updatedReport = await Report.findByIdAndUpdate(
       reportId,
       {
         status: status,
         updatedAt: new Date(),
-        updatedById: updatedBy || new mongoose.Types.ObjectId(), // ID của người cập nhật
+        updatedById: "6728699364c0871fd44f1c94", // Thay bằng logic kiểm tra nếu cần // Dùng ObjectId mới nếu không có giá trị
       },
       { new: true } // Trả về báo cáo đã cập nhật
     );

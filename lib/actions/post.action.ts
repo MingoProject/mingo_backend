@@ -2,7 +2,12 @@
 import { connectToDatabase } from "../mongoose";
 import Post from "@/database/post.model";
 import { CommentResponseDTO } from "@/dtos/CommentDTO";
-import { PostCreateDTO, PostResponseDTO, PostYouLikeDTO } from "@/dtos/PostDTO";
+import {
+  MangementPostResponseDTO,
+  PostCreateDTO,
+  PostResponseDTO,
+  PostYouLikeDTO,
+} from "@/dtos/PostDTO";
 import { UserResponseDTO } from "@/dtos/UserDTO";
 import mongoose, { Schema } from "mongoose";
 import Comment from "@/database/comment.model";
@@ -608,6 +613,97 @@ export async function getPostById(
     }
 
     return post;
+  } catch (error) {
+    console.error("Error fetching post by ID:", error);
+    throw error;
+  }
+}
+export async function getManagementPostById(
+  postId: string
+): Promise<MangementPostResponseDTO | null> {
+  try {
+    await connectToDatabase();
+
+    // Tìm bài post và populate các trường liên quan
+    const post = await Post.findById(postId)
+      .populate("author")
+      .populate("media")
+      .populate({
+        path: "comments",
+        populate: {
+          path: "userId", // Populate userId trong comments
+          select: "firstName lastName ", // Lấy các trường cần thiết
+        },
+      })
+      .populate("tags")
+      .populate("likes")
+      .populate("shares");
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    // Xử lý tags
+    const tagsUser = post.tags.map((tag: any) => ({
+      id: tag._id,
+      avatar: tag.avatar,
+    }));
+
+    // Xử lý likes
+    const likesUser = post.likes.map((like: any) => ({
+      id: like._id,
+      avatar: like.avatar,
+    }));
+
+    // Xử lý shares
+    const sharesUser = post.shares.map((share: any) => ({
+      id: share._id,
+      avatar: share.avatar,
+    }));
+
+    // Xử lý media
+    const attachments = post.media.map((media: any) => ({
+      id: media._id,
+      src: media.url,
+    }));
+
+    // Xử lý comments
+    const comments = post.comments.map((comment: any) => ({
+      commentId: comment._id,
+      author: {
+        id: comment.userId?._id, // Kiểm tra null-safety
+        firstName: comment.userId?.firstName,
+        lastName: comment.userId?.lastName,
+      },
+      content: comment.content,
+      createAt: comment.createAt,
+    }));
+
+    // Tạo đối tượng phản hồi chi tiết
+    const detailPost: MangementPostResponseDTO = {
+      userId: {
+        id: post.author._id,
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+        dob: post.author.birthDay,
+        phoneNumber: post.author.phoneNumber,
+        email: post.author.email,
+        gender: post.author.gender,
+      },
+      postId: post._id,
+      content: post.content,
+      createAt: post.createAt,
+      location: post.location,
+      tag: tagsUser,
+      privacy: post.privacy.type,
+      attachment: attachments,
+      like: likesUser,
+      share: sharesUser,
+      comment: comments,
+    };
+
+    return detailPost;
   } catch (error) {
     console.error("Error fetching post by ID:", error);
     throw error;
