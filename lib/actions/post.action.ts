@@ -119,6 +119,7 @@ export async function updatePost(
 
     post.content = updateData.content || post.content;
     post.media = updateData.media || post.media;
+    post.tags = updateData.tags || post.tags;
     post.url = updateData.url || post.url;
     post.location = updateData.location || post.location;
     post.privacy = updateData.privacy || post.privacy;
@@ -149,6 +150,10 @@ export async function likePost(
       throw new Error(`User with ID ${userId} does not exist.`);
     }
 
+    user.likeIds.push(postId);
+
+    await user.save();
+
     await post.likes.addToSet(userId);
 
     await post.save();
@@ -174,7 +179,11 @@ export async function disLikePost(
 
     await post.likes.pull(userId);
 
+    await user.likeIds.pull(postId);
+
     await post.save();
+
+    await user.save();
 
     return { message: `Disliked post ${postId}` };
   } catch (error) {
@@ -263,6 +272,9 @@ export const getAuthorByPostId = async (
       postIds: author.postIds,
       createAt: author.createdAt,
       createBy: author.createBy,
+      status: author.status,
+      saveIds: author.saveIds,
+      likeIds: author.likeIds,
     };
 
     return authorDTO; // Trả về thông tin tác giả
@@ -297,8 +309,8 @@ export const getMediasByPostId = async (
         url: media.url,
         type: media.type,
         caption: media.caption,
-        createdAt: media.createdAt,
-        author: media.author,
+        createAt: media.createAt,
+        createBy: media.createBy,
         likes: media.likes || [],
         comments: media.comments || [],
         shares: media.shares || [],
@@ -593,7 +605,7 @@ export async function getPostById(
     const post = await Post.findById(postId)
       .populate("author", "firstName lastName avatar")
       .populate("media")
-      .populate("comments")
+      // .populate("comments")
       .populate("tags");
 
     if (!post) {

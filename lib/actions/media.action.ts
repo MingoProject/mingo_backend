@@ -178,6 +178,9 @@ export const getAuthorByMediaId = async (
       postIds: author.postIds,
       createAt: author.createdAt,
       createBy: author.createBy,
+      status: author.status,
+      saveIds: author.saveIds,
+      likeIds: author.likeIds,
     };
 
     return authorDTO; // Trả về thông tin tác giả
@@ -239,3 +242,25 @@ export const getLikesByMediaId = async (
     throw new Error("Error fetching media: " + error.message);
   }
 };
+
+export async function getMediaById(
+  mediaId: string
+): Promise<MediaCreateDTO | null> {
+  try {
+    await connectToDatabase();
+
+    const media = await Media.findById(mediaId)
+      .populate("createBy", "firstName lastName avatar _id")
+      .populate("likes")
+      .populate("comments");
+
+    if (!media) {
+      throw new Error("media not found");
+    }
+
+    return media;
+  } catch (error) {
+    console.error("Error fetching media by ID:", error);
+    throw error;
+  }
+}

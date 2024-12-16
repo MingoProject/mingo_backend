@@ -1,4 +1,3 @@
-// dtos/reportDTO.ts
 import { Schema } from "mongoose";
 
 export interface UserInfor {
