@@ -41,6 +41,7 @@ export interface UserResponseDTO {
   birthDay: Date;
   attendDate: Date;
   flag: boolean;
+  countReport: number;
   friendIds: Schema.Types.ObjectId[];
   followingIds: Schema.Types.ObjectId[];
   followerIds: Schema.Types.ObjectId[];

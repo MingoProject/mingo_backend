@@ -9,6 +9,7 @@ export interface UserInfor {
   phoneNumber: string;
   email: string;
   gender: boolean;
+  reportCount?: number;
 }
 
 export interface ReportCreateDTO {
