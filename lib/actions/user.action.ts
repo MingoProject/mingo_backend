@@ -33,6 +33,32 @@ export async function getAllUsers() {
   }
 }
 
+export const countUsers = async () => {
+  try {
+    const count = await User.countDocuments();
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting users: " + error.message);
+  }
+};
+
+export const countUsersByAttendDate = async () => {
+  try {
+    const currentDate = new Date().setHours(0, 0, 0, 0);
+    const nextDay = new Date(currentDate).setDate(
+      new Date(currentDate).getDate() + 1
+    );
+
+    const count = await User.countDocuments({
+      attendDate: { $gte: currentDate, $lt: nextDay },
+    });
+
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting users by attendDate: " + error.message);
+  }
+};
+
 export async function createUser(
   params: UserRegisterDTO,
   createBy: Schema.Types.ObjectId | undefined

@@ -711,3 +711,49 @@ export async function getManagementPostById(
     throw error;
   }
 }
+
+export const countPosts = async () => {
+  try {
+    const count = await Post.countDocuments();
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting posts: " + error.message);
+  }
+};
+
+export const countPostsByCreatedDate = async () => {
+  try {
+    const currentDate = new Date().setHours(0, 0, 0, 0);
+    const nextDay = new Date(currentDate).setDate(
+      new Date(currentDate).getDate() + 1
+    );
+
+    const count = await Post.countDocuments({
+      createAt: { $gte: currentDate, $lt: nextDay },
+    });
+
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting posts by createdDate: " + error.message);
+  }
+};
+
+export const fetchPostsWithQuery = async (query: string) => {
+  try {
+    const posts = await Post.find({
+      $or: [
+        { content: { $regex: query, $options: "i" } },
+        { "author.firstName": { $regex: query, $options: "i" } },
+        { "author.lastName": { $regex: query, $options: "i" } },
+      ],
+    })
+      .populate("author", "firstName lastName avatar")
+      .populate("media")
+      .sort({ createdAt: -1 });
+
+    return posts;
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    throw new Error("Failed to fetch posts");
+  }
+};

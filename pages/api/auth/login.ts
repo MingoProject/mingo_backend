@@ -35,6 +35,9 @@ export default async function hanlder(
       throw new Error("Invalid phone number or password!");
     }
 
+    const roles = existedUser.roles;
+    const flag = existedUser.flag;
+
     const token =
       "Bearer " +
       jwt.sign(
@@ -50,6 +53,8 @@ export default async function hanlder(
     return res.status(200).json({
       message: "Login successful",
       token,
+      roles,
+      flag,
     });
   });
 }
