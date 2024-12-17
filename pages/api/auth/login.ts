@@ -31,6 +31,8 @@ export default async function hanlder(
       existedUser.password
     );
 
+    console.log(isPasswordValid, "isPasswordValid");
+
     if (!isPasswordValid) {
       throw new Error("Invalid phone number or password!");
     }
