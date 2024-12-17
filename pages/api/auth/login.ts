@@ -36,6 +36,7 @@ export default async function hanlder(
     }
 
     const roles = existedUser.roles;
+    const flag = existedUser.flag;
 
     const token =
       "Bearer " +
@@ -53,6 +54,7 @@ export default async function hanlder(
       message: "Login successful",
       token,
       roles,
+      flag,
     });
   });
 }

@@ -736,3 +736,23 @@ export const countPostsByCreatedDate = async () => {
     throw new Error("Error counting posts by createdDate: " + error.message);
   }
 };
+
+export const fetchPostsWithQuery = async (query: string) => {
+  try {
+    const posts = await Post.find({
+      $or: [
+        { content: { $regex: query, $options: "i" } },
+        { "author.firstName": { $regex: query, $options: "i" } },
+        { "author.lastName": { $regex: query, $options: "i" } },
+      ],
+    })
+      .populate("author", "firstName lastName avatar")
+      .populate("media")
+      .sort({ createdAt: -1 });
+
+    return posts;
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    throw new Error("Failed to fetch posts");
+  }
+};
