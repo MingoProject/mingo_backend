@@ -22,6 +22,7 @@ export interface IUser extends Document, IAudit {
   birthDay: Date;
   attendDate: Date;
   flag: boolean;
+  countReport: number;
   friendIds: Schema.Types.ObjectId[];
   followingIds: Schema.Types.ObjectId[];
   followerIds: Schema.Types.ObjectId[];
@@ -54,6 +55,7 @@ const UserSchema = new Schema<IUser>({
   birthDay: { type: Date, required: false },
   attendDate: { type: Date, required: true },
   flag: { type: Boolean, required: true, default: true },
+  countReport: { type: Number, required: true, default: 0 },
   friendIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   followingIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
   followerIds: [{ type: Schema.Types.ObjectId, ref: "User" }],

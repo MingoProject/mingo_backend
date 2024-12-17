@@ -310,6 +310,50 @@ export async function createMessage(
   }
 }
 
+// export async function createGroup(
+//   membersIds: string[],
+//   leaderId: string,
+//   groupName: string,
+//   groupAva: string
+// ) {
+//   if (!Array.isArray(membersIds) || membersIds.length === 0) {
+//     throw new Error("membersIds must be a non-empty array");
+//   }
+//   const leaderExist = await User.exists({ _id: leaderId });
+//   if (!leaderExist) {
+//     throw new Error("Leader ID does not exist");
+//   }
+//   const allMembersExist = await User.exists({ _id: { $in: membersIds } });
+//   if (!allMembersExist) {
+//     throw new Error("One or more member IDs do not exist");
+//   }
+
+//   const existMessageBox = await MessageBox.findOne({
+//     receiverIds: { $all: membersIds },
+//   })
+//     .where("receiverIds")
+//     .size(membersIds.length);
+
+//   if (existMessageBox) {
+//     throw new Error("Exist group have same members");
+//   }
+
+//   const userObjectId = new Types.ObjectId(leaderId);
+//   const messageBox = await MessageBox.create({
+//     senderId: leaderId,
+//     receiverIds: membersIds,
+//     messageIds: [],
+//     groupName: groupName,
+//     groupAva: groupAva,
+//     flag: true,
+//     pin: false,
+//     createBy: userObjectId,
+//     status: true,
+//   });
+//   // return { success: true, messageBoxId: messageBox._id, messageBox };
+//   return { success: true, message: "Create group successfully" };
+// }
+
 export async function createGroup(
   membersIds: string[],
   leaderId: string,
@@ -319,26 +363,37 @@ export async function createGroup(
   if (!Array.isArray(membersIds) || membersIds.length === 0) {
     throw new Error("membersIds must be a non-empty array");
   }
+
+  // Kiểm tra leader có tồn tại
   const leaderExist = await User.exists({ _id: leaderId });
   if (!leaderExist) {
     throw new Error("Leader ID does not exist");
   }
-  const allMembersExist = await User.exists({ _id: { $in: membersIds } });
-  if (!allMembersExist) {
+
+  // Kiểm tra tất cả các thành viên có tồn tại
+  const allMembersExist = await User.countDocuments({
+    _id: { $in: membersIds },
+  });
+  if (allMembersExist !== membersIds.length) {
     throw new Error("One or more member IDs do not exist");
   }
 
+  // Kiểm tra sự tồn tại của nhóm với các thành viên trùng lặp
   const existMessageBox = await MessageBox.findOne({
-    receiverIds: { $all: membersIds },
-  })
-    .where("receiverIds")
-    .size(membersIds.length);
+    $and: [
+      { receiverIds: { $all: membersIds } }, // Bao gồm tất cả các thành viên
+      { receiverIds: { $size: membersIds.length } }, // Đảm bảo số lượng thành viên khớp
+    ],
+  });
 
   if (existMessageBox) {
-    throw new Error("Exist group have same members");
+    throw new Error("A group with the same members already exists");
   }
 
+  // Tạo ObjectId cho leader
   const userObjectId = new Types.ObjectId(leaderId);
+
+  // Tạo nhóm mới
   const messageBox = await MessageBox.create({
     senderId: leaderId,
     receiverIds: membersIds,
@@ -350,8 +405,12 @@ export async function createGroup(
     createBy: userObjectId,
     status: true,
   });
-  // return { success: true, messageBoxId: messageBox._id, messageBox };
-  return { success: true, message: "Create group successfully" };
+
+  return {
+    success: true,
+    message: "Create group successfully",
+    messageBoxId: messageBox._id,
+  };
 }
 
 export async function recieveMessage(messageId: string) {

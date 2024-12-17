@@ -12,12 +12,14 @@ export async function createReport(
   try {
     await connectToDatabase();
 
+    console.log(createBy, "createBy");
+    console.log(params);
     // Tạo dữ liệu báo cáo
     const reportData = {
       title: params.title || "",
       content: params.content,
       reportedId: params.reportedId,
-      createdById: params.createdById, // ID của người tạo báo cáo
+      createdById: createBy, // ID của người tạo báo cáo
       reportedEntityId: params.reportedEntityId,
       entityType: params.entityType,
       status: 0, // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
@@ -120,12 +122,13 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
       .populate({
         path: "createdById",
         model: User,
-        select: "firstName lastName email avatar phoneNumber gender birthDay",
+        select: "firstName lastName email avatar phoneNumber gender birthDay ",
       })
       .populate({
         path: "reportedId",
         model: User,
-        select: "firstName lastName email avatar phoneNumber gender birthDay",
+        select:
+          "firstName lastName email avatar phoneNumber gender birthDay countReport",
       })
       .sort({ createdAt: -1 })
       .exec(); // Sắp xếp giảm dần theo ngày tạo
@@ -153,6 +156,7 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
         phoneNumber: report.reportedId.phoneNumber,
         email: report.reportedId.email,
         gender: report.reportedId.gender,
+        countReport: report.reportedId.countReport,
       },
       reportedEntityId: report.reportedEntityId,
       entityType: report.entityType,
@@ -193,3 +197,30 @@ export const countReportsBycreatedDate = async () => {
     throw new Error("Error counting reports by createdDate: " + error.message);
   }
 };
+
+export async function updateReportUserCount(
+  reportId: string
+): Promise<ReportResponseDTO> {
+  try {
+    await connectToDatabase();
+
+    const updatedReport = await User.findByIdAndUpdate(
+      reportId,
+      {
+        $inc: { countReport: 1 }, // Tăng countReport lên 1
+        updatedAt: new Date(),
+        updatedById: "6728699364c0871fd44f1c94",
+      },
+      { new: true } // Trả về báo cáo đã cập nhật
+    );
+
+    if (!updatedReport) {
+      throw new Error("Report not found");
+    }
+
+    return updatedReport as ReportResponseDTO;
+  } catch (error) {
+    console.error("Error updating report status:", error);
+    throw new Error("Error updating report status: " + error);
+  }
+}
