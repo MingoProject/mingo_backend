@@ -36,3 +36,17 @@ export interface ReportResponseDTO {
   attachments?: string[]; // Các file đính kèm (nếu có)
   proofs?: string[]; // Các bằng chứng (nếu có)
 }
+
+export interface ReportCommentResponseDTO {
+  _id: string;
+  title?: string;
+  content: string;
+  createdById: UserInfor;
+  reportedId: UserInfor; // Thêm reportedId vào đây
+  reportedEntityId: string;
+  entityType: string;
+  status: number; // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
+  createdAt: Date;
+  attachments?: string[]; // Các file đính kèm (nếu có)
+  proofs?: string[]; // Các bằng chứng (nếu có)
+}

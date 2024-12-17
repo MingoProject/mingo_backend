@@ -79,7 +79,8 @@ export async function createReport(
 
 export async function updateReportStatus(
   reportId: string,
-  status: 1 | 2
+  status: 1 | 2,
+  updatedBy: Schema.Types.ObjectId | undefined
 ): Promise<ReportResponseDTO> {
   try {
     await connectToDatabase();
@@ -97,7 +98,7 @@ export async function updateReportStatus(
       {
         status: status,
         updatedAt: new Date(),
-        updatedById: "6728699364c0871fd44f1c94", // Thay bằng logic kiểm tra nếu cần // Dùng ObjectId mới nếu không có giá trị
+        updatedById: updatedBy || new mongoose.Types.ObjectId(), // Thay bằng logic kiểm tra nếu cần // Dùng ObjectId mới nếu không có giá trị
       },
       { new: true } // Trả về báo cáo đã cập nhật
     );
@@ -199,17 +200,20 @@ export const countReportsBycreatedDate = async () => {
 };
 
 export async function updateReportUserCount(
-  reportId: string
+  reportId: string,
+  updatedBy: Schema.Types.ObjectId | undefined
 ): Promise<ReportResponseDTO> {
   try {
     await connectToDatabase();
+
+    console.log(reportId);
 
     const updatedReport = await User.findByIdAndUpdate(
       reportId,
       {
         $inc: { countReport: 1 }, // Tăng countReport lên 1
         updatedAt: new Date(),
-        updatedById: "6728699364c0871fd44f1c94",
+        updatedById: updatedBy || new mongoose.Types.ObjectId(),
       },
       { new: true } // Trả về báo cáo đã cập nhật
     );
