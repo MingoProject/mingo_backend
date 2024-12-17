@@ -710,3 +710,29 @@ export async function getManagementPostById(
     throw error;
   }
 }
+
+export const countPosts = async () => {
+  try {
+    const count = await Post.countDocuments();
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting posts: " + error.message);
+  }
+};
+
+export const countPostsByCreatedDate = async () => {
+  try {
+    const currentDate = new Date().setHours(0, 0, 0, 0);
+    const nextDay = new Date(currentDate).setDate(
+      new Date(currentDate).getDate() + 1
+    );
+
+    const count = await Post.countDocuments({
+      createAt: { $gte: currentDate, $lt: nextDay },
+    });
+
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting posts by createdDate: " + error.message);
+  }
+};

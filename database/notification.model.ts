@@ -46,6 +46,7 @@ const NotificationSchema = new Schema<INotification>({
       "report_post",
       "report_user",
       "report_comment",
+      "report_message",
     ],
     required: true,
   },
