@@ -167,3 +167,29 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
     throw new Error("Error fetching reports: " + error);
   }
 }
+
+export const countReports = async () => {
+  try {
+    const count = await Report.countDocuments();
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting reports: " + error.message);
+  }
+};
+
+export const countReportsBycreatedDate = async () => {
+  try {
+    const currentDate = new Date().setHours(0, 0, 0, 0);
+    const nextDay = new Date(currentDate).setDate(
+      new Date(currentDate).getDate() + 1
+    );
+
+    const count = await Report.countDocuments({
+      createdDate: { $gte: currentDate, $lt: nextDay },
+    });
+
+    return count;
+  } catch (error: any) {
+    throw new Error("Error counting reports by createdDate: " + error.message);
+  }
+};
