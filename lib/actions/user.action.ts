@@ -332,7 +332,7 @@ export async function getMyPosts(id: String | undefined) {
         path: "postIds",
         model: Post,
       })
-      .select("postIds"); // Only select the 'postIds' field
+      .select("postIds");
 
     if (!user) {
       console.log(`Cannot get ${id} posts now`);
@@ -705,3 +705,12 @@ export async function getMyLikedPosts(id: String | undefined) {
     throw error;
   }
 }
+
+export const findUserByPhoneNumber = async (phoneNumber: string) => {
+  try {
+    const user = await User.findOne({ phoneNumber });
+    return user;
+  } catch (error: any) {
+    throw new Error(`Error finding user by phone number: ${error.message}`);
+  }
+};

@@ -108,7 +108,7 @@ export async function deletePost(postId: string) {
 export async function updatePost(
   postId: string,
   updateData: Partial<PostCreateDTO>
-): Promise<PostResponseDTO> {
+) {
   try {
     connectToDatabase();
     const post = await Post.findById(postId);
@@ -125,8 +125,23 @@ export async function updatePost(
     post.privacy = updateData.privacy || post.privacy;
 
     const updatedPost = await post.save();
+    const populatedPost = await Post.findById(updatedPost._id)
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar", // Chỉ lấy các trường cần thiết
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar", // Ví dụ: lấy id và tên tag
+      })
+      .populate({
+        path: "media",
+        select: "_id url type", // Ví dụ: lấy id và url của media
+      });
 
-    return updatedPost as PostResponseDTO;
+    return populatedPost;
+
+    // return updatedPost;
   } catch (error) {
     console.error(error);
     throw error;
@@ -607,6 +622,8 @@ export async function getPostById(
       .populate("author", "firstName lastName avatar")
       .populate("media")
       // .populate("comments")
+      .populate("likes")
+      .populate("shares")
       .populate("tags");
 
     if (!post) {
