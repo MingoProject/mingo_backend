@@ -36,21 +36,12 @@ export default async function handler(
         console.log("Files:", files);
 
         try {
-          // Chuyển đổi `fields` thành `RequestSendMessage`
           if (req.user && req.user.id) {
             const userId = req.user.id.toString();
             if (userId) {
-              // const receiverId = Array.isArray(fields.recipientId)
-              //   ? fields.recipientId[0]
-              //   : "";
-              // const receiverIdsArray = receiverId
-              //   ? receiverId.split(",").map((id) => id.trim())
-              //   : [];
               const data: RequestSendMessageDTO = {
                 boxId: Array.isArray(fields.boxId) ? fields.boxId[0] : "",
                 content: JSON.parse(fields.content as unknown as string),
-                //time: new Date()
-                //recipientId: receiverIdsArray
               };
               console.log("Parsed data:", data);
 

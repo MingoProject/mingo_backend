@@ -13,7 +13,10 @@ export default async function handler(
       if (req.method === "POST") {
         try {
           const param: FriendRequestDTO = req.body;
+          console.log(param, "thiss iss paramm");
           const requestedRelation = await unBlock(param);
+          console.log(requestedRelation, "thiss iss requestedRelation");
+
           return res.status(201).json(requestedRelation);
         } catch (error) {
           console.error(error);

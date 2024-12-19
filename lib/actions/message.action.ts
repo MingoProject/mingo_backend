@@ -40,6 +40,8 @@ const generateRandomString = (length = 20) => {
 async function createFile(file: formidable.File, userId: string) {
   try {
     connectToDatabase();
+    console.log(file, "filee create file");
+
     const mimetype = file.mimetype;
     let result = null;
     let type = "";
