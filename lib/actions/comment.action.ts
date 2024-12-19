@@ -248,6 +248,7 @@ export async function getAuthorByCommentId(
       birthDay: author.birthDay,
       attendDate: author.attendDate,
       flag: author.flag,
+      countReport: author.countReport,
       friendIds: author.friendIds,
       followingIds: author.followingIds,
       followerIds: author.followerIds,

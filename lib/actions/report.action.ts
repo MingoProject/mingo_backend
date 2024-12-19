@@ -3,7 +3,11 @@ import Report from "@/database/report.model"; // Import model Report
 import mongoose, { Schema } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
-import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/ReportDTO";
+import {
+  CommentReportCreateDTO,
+  ReportCreateDTO,
+  ReportResponseDTO,
+} from "@/dtos/ReportDTO";
 
 export async function createReport(
   params: ReportCreateDTO,
@@ -12,12 +16,14 @@ export async function createReport(
   try {
     await connectToDatabase();
 
+    console.log(createBy, "createBy");
+    console.log(params);
     // Tạo dữ liệu báo cáo
     const reportData = {
       title: params.title || "",
       content: params.content,
       reportedId: params.reportedId,
-      createdById: params.createdById, // ID của người tạo báo cáo
+      createdById: createBy, // ID của người tạo báo cáo
       reportedEntityId: params.reportedEntityId,
       entityType: params.entityType,
       status: 0, // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
@@ -37,47 +43,47 @@ export async function createReport(
   }
 }
 
-// export async function updateReportStatus(
-//   reportId: string,
-//   status: 1 | 2,
-//   updatedBy: Schema.Types.ObjectId | undefined
-// ): Promise<ReportResponseDTO> {
-//   try {
-//     await connectToDatabase();
+export async function createCommentReport(
+  params: CommentReportCreateDTO,
+  createBy: Schema.Types.ObjectId | undefined
+): Promise<ReportResponseDTO> {
+  try {
+    await connectToDatabase();
 
-//     // Kiểm tra trạng thái hợp lệ
-//     const validStatuses = [1, 2];
-//     if (!validStatuses.includes(status)) {
-//       throw new Error(
-//         "Invalid status value. Allowed values are 'done' or 'reject'."
-//       );
-//     }
+    console.log(createBy, "createBy");
+    console.log(params);
+    // Tạo dữ liệu báo cáo
+    const reportData = {
+      title: params.title || "",
+      content: params.content,
+      reportedId: params.reportedId,
+      createdById: createBy, // ID của người tạo báo cáo
+      reportedEntityId: params.reportedEntityId,
+      parentReportEntityId: params.parentReportEntityId,
+      entityType: params.entityType,
+      status: 0, // Trạng thái báo cáo (e.g., "pending", "resolved", etc.)
+      createdAt: new Date(),
+      attachments: params.attachments || [], // Các file đính kèm (nếu có)
+      proofs: params.proofs || [], // Các bằng chứng (nếu có)
+      createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
+    };
 
-//     // Tìm và cập nhật báo cáo
-//     const updatedReport = await Report.findByIdAndUpdate(
-//       reportId,
-//       {
-//         status: status,
-//         updatedAt: new Date(),
-//         updatedById: updatedBy || new mongoose.Types.ObjectId(), // ID của người cập nhật
-//       },
-//       { new: true } // Trả về báo cáo đã cập nhật
-//     );
+    // Tạo báo cáo mới trong DB
+    const newReport = await Report.create(reportData);
 
-//     if (!updatedReport) {
-//       throw new Error("Report not found");
-//     }
+    console.log(newReport, "kkkk");
 
-//     return updatedReport as ReportResponseDTO;
-//   } catch (error) {
-//     console.error("Error updating report status:", error);
-//     throw new Error("Error updating report status: " + error);
-//   }
-// }
+    return newReport as ReportResponseDTO;
+  } catch (error) {
+    console.error("Error creating report:", error);
+    throw new Error("Error creating report: " + error);
+  }
+}
 
 export async function updateReportStatus(
   reportId: string,
-  status: 1 | 2
+  status: 1 | 2,
+  updatedBy: Schema.Types.ObjectId | undefined
 ): Promise<ReportResponseDTO> {
   try {
     await connectToDatabase();
@@ -95,7 +101,7 @@ export async function updateReportStatus(
       {
         status: status,
         updatedAt: new Date(),
-        updatedById: "6728699364c0871fd44f1c94", // Thay bằng logic kiểm tra nếu cần // Dùng ObjectId mới nếu không có giá trị
+        updatedById: updatedBy || new mongoose.Types.ObjectId(), // Thay bằng logic kiểm tra nếu cần // Dùng ObjectId mới nếu không có giá trị
       },
       { new: true } // Trả về báo cáo đã cập nhật
     );
@@ -120,12 +126,13 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
       .populate({
         path: "createdById",
         model: User,
-        select: "firstName lastName email avatar phoneNumber gender birthDay",
+        select: "firstName lastName email avatar phoneNumber gender birthDay ",
       })
       .populate({
         path: "reportedId",
         model: User,
-        select: "firstName lastName email avatar phoneNumber gender birthDay",
+        select:
+          "firstName lastName email avatar phoneNumber gender birthDay countReport",
       })
       .sort({ createdAt: -1 })
       .exec(); // Sắp xếp giảm dần theo ngày tạo
@@ -153,6 +160,7 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
         phoneNumber: report.reportedId.phoneNumber,
         email: report.reportedId.email,
         gender: report.reportedId.gender,
+        countReport: report.reportedId.countReport,
       },
       reportedEntityId: report.reportedEntityId,
       entityType: report.entityType,
@@ -160,6 +168,7 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
       createdAt: report.createdAt,
       attachments: report.attachments || [],
       proofs: report.proofs || [],
+      parentReportEntityId: report.parentReportEntityId || "",
     }));
     return reportDTOs;
   } catch (error) {
@@ -193,3 +202,33 @@ export const countReportsBycreatedDate = async () => {
     throw new Error("Error counting reports by createdDate: " + error.message);
   }
 };
+
+export async function updateReportUserCount(
+  reportId: string,
+  updatedBy: Schema.Types.ObjectId | undefined
+): Promise<ReportResponseDTO> {
+  try {
+    await connectToDatabase();
+
+    console.log(reportId);
+
+    const updatedReport = await User.findByIdAndUpdate(
+      reportId,
+      {
+        $inc: { countReport: 1 }, // Tăng countReport lên 1
+        updatedAt: new Date(),
+        updatedById: updatedBy || new mongoose.Types.ObjectId(),
+      },
+      { new: true } // Trả về báo cáo đã cập nhật
+    );
+
+    if (!updatedReport) {
+      throw new Error("Report not found");
+    }
+
+    return updatedReport as ReportResponseDTO;
+  } catch (error) {
+    console.error("Error updating report status:", error);
+    throw new Error("Error updating report status: " + error);
+  }
+}
