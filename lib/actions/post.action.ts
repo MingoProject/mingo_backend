@@ -620,7 +620,7 @@ export async function getPostById(
     await connectToDatabase();
 
     const post = await Post.findById(postId)
-      .populate("author", "firstName lastName avatar")
+      .populate("author", "_id firstName lastName avatar")
       .populate("media")
       // .populate("comments")
       .populate("likes")
