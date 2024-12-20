@@ -6,25 +6,54 @@ import {
   UpdateUserDTO,
   UserRegisterDTO,
   UserResponseDTO,
-  UpdateAvatarDTO,
-  UpdateBackgroundDTO,
   UpdateUserBioDTO,
 } from "@/dtos/UserDTO";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
 import bcrypt from "bcrypt";
 import mongoose, { Schema, Types } from "mongoose";
-import { PostResponseDTO } from "@/dtos/PostDTO";
 import Post from "@/database/post.model";
 import cloudinary from "@/cloudinary";
 import Media from "@/database/media.model";
-// import Relation from "@/database/relation.model";
 const saltRounds = 10;
 
-export async function getAllUsers() {
+export async function getAllUsers(): Promise<UserResponseDTO[]> {
   try {
     connectToDatabase();
-    const result: UserResponseDTO[] = await User.find();
+    const users = await User.find().select("-password"); // Loại bỏ password
+    const result: UserResponseDTO[] = users.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
 
     return result;
   } catch (error) {
@@ -93,9 +122,42 @@ export async function createUser(
       status: false,
     });
 
-    const newUser: UserResponseDTO = await User.create(createUserData);
+    const newUser = await User.create(createUserData);
+    const result: UserResponseDTO = {
+      _id: newUser._id.toString(),
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      nickName: newUser.nickName,
+      phoneNumber: newUser.phoneNumber,
+      email: newUser.email,
+      role: newUser.role,
+      avatar: newUser.avatar,
+      background: newUser.background,
+      gender: newUser.gender,
+      address: newUser.address,
+      job: newUser.job,
+      hobbies: newUser.hobbies,
+      bio: newUser.bio,
+      point: newUser.point,
+      relationShip: newUser.relationShip,
+      birthDay: newUser.birthDay,
+      attendDate: newUser.attendDate,
+      flag: newUser.flag,
+      countReport: newUser.countReport,
+      friendIds: newUser.friendIds,
+      followingIds: newUser.followingIds,
+      followerIds: newUser.followerIds,
+      bestFriendIds: newUser.bestFriendIds,
+      blockedIds: newUser.blockedIds,
+      postIds: newUser.postIds,
+      createAt: newUser.createAt,
+      createBy: newUser.createBy,
+      status: newUser.status,
+      saveIds: newUser.saveIds,
+      likeIds: newUser.likeIds,
+    };
 
-    return newUser;
+    return result;
   } catch (error) {
     console.log(error);
   }
@@ -152,9 +214,42 @@ export async function createAdmin(
       createBy: createBy ? createBy : "unknown",
     });
 
-    const newUser: UserResponseDTO = await User.create(createUserData);
+    const newUser = await User.create(createUserData);
+    const result: UserResponseDTO = {
+      _id: newUser._id.toString(),
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      nickName: newUser.nickName,
+      phoneNumber: newUser.phoneNumber,
+      email: newUser.email,
+      role: newUser.role,
+      avatar: newUser.avatar,
+      background: newUser.background,
+      gender: newUser.gender,
+      address: newUser.address,
+      job: newUser.job,
+      hobbies: newUser.hobbies,
+      bio: newUser.bio,
+      point: newUser.point,
+      relationShip: newUser.relationShip,
+      birthDay: newUser.birthDay,
+      attendDate: newUser.attendDate,
+      flag: newUser.flag,
+      countReport: newUser.countReport,
+      friendIds: newUser.friendIds,
+      followingIds: newUser.followingIds,
+      followerIds: newUser.followerIds,
+      bestFriendIds: newUser.bestFriendIds,
+      blockedIds: newUser.blockedIds,
+      postIds: newUser.postIds,
+      createAt: newUser.createAt,
+      createBy: newUser.createBy,
+      status: newUser.status,
+      saveIds: newUser.saveIds,
+      likeIds: newUser.likeIds,
+    };
 
-    return newUser;
+    return result;
   } catch (error) {
     console.log(error);
   }
@@ -248,15 +343,45 @@ export async function updateUser(
       throw new Error("User not found!");
     }
 
-    const updatedUser: UserResponseDTO | null = await User.findByIdAndUpdate(
-      userId,
-      params,
-      {
-        new: true,
-      }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, params, {
+      new: true,
+    });
 
-    return { status: true, newProfile: updatedUser };
+    const result: UserResponseDTO = {
+      _id: updatedUser._id.toString(),
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      nickName: updatedUser.nickName,
+      phoneNumber: updatedUser.phoneNumber,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      background: updatedUser.background,
+      gender: updatedUser.gender,
+      address: updatedUser.address,
+      job: updatedUser.job,
+      hobbies: updatedUser.hobbies,
+      bio: updatedUser.bio,
+      point: updatedUser.point,
+      relationShip: updatedUser.relationShip,
+      birthDay: updatedUser.birthDay,
+      attendDate: updatedUser.attendDate,
+      flag: updatedUser.flag,
+      countReport: updatedUser.countReport,
+      friendIds: updatedUser.friendIds,
+      followingIds: updatedUser.followingIds,
+      followerIds: updatedUser.followerIds,
+      bestFriendIds: updatedUser.bestFriendIds,
+      blockedIds: updatedUser.blockedIds,
+      postIds: updatedUser.postIds,
+      createAt: updatedUser.createAt,
+      createBy: updatedUser.createBy,
+      status: updatedUser.status,
+      saveIds: updatedUser.saveIds,
+      likeIds: updatedUser.likeIds,
+    };
+
+    return { status: true, newProfile: result };
   } catch (error) {
     console.log(error);
     throw error;
@@ -276,15 +401,45 @@ export async function updateUserBio(
       throw new Error("User not found!");
     }
 
-    const updatedUser: UserResponseDTO | null = await User.findByIdAndUpdate(
-      userId,
-      params,
-      {
-        new: true,
-      }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, params, {
+      new: true,
+    });
 
-    return { status: true, newProfile: updatedUser };
+    const result: UserResponseDTO = {
+      _id: updatedUser._id.toString(),
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      nickName: updatedUser.nickName,
+      phoneNumber: updatedUser.phoneNumber,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      background: updatedUser.background,
+      gender: updatedUser.gender,
+      address: updatedUser.address,
+      job: updatedUser.job,
+      hobbies: updatedUser.hobbies,
+      bio: updatedUser.bio,
+      point: updatedUser.point,
+      relationShip: updatedUser.relationShip,
+      birthDay: updatedUser.birthDay,
+      attendDate: updatedUser.attendDate,
+      flag: updatedUser.flag,
+      countReport: updatedUser.countReport,
+      friendIds: updatedUser.friendIds,
+      followingIds: updatedUser.followingIds,
+      followerIds: updatedUser.followerIds,
+      bestFriendIds: updatedUser.bestFriendIds,
+      blockedIds: updatedUser.blockedIds,
+      postIds: updatedUser.postIds,
+      createAt: updatedUser.createAt,
+      createBy: updatedUser.createBy,
+      status: updatedUser.status,
+      saveIds: updatedUser.saveIds,
+      likeIds: updatedUser.likeIds,
+    };
+
+    return { status: true, newProfile: result };
   } catch (error) {
     console.log(error);
     throw error;
@@ -312,12 +467,46 @@ export async function disableUser(userId: string) {
 export async function getMyProfile(id: String | undefined) {
   try {
     connectToDatabase();
-    const myProfile: UserResponseDTO | null = await User.findById(id);
+    const myProfile = await User.findById(id);
     if (!myProfile) {
       console.log(`Cannot get ${id} profile now`);
       throw new Error(`Cannot get ${id} profile now`);
     }
-    return myProfile;
+    const result: UserResponseDTO = {
+      _id: myProfile._id.toString(),
+      firstName: myProfile.firstName,
+      lastName: myProfile.lastName,
+      nickName: myProfile.nickName,
+      phoneNumber: myProfile.phoneNumber,
+      email: myProfile.email,
+      role: myProfile.role,
+      avatar: myProfile.avatar,
+      background: myProfile.background,
+      gender: myProfile.gender,
+      address: myProfile.address,
+      job: myProfile.job,
+      hobbies: myProfile.hobbies,
+      bio: myProfile.bio,
+      point: myProfile.point,
+      relationShip: myProfile.relationShip,
+      birthDay: myProfile.birthDay,
+      attendDate: myProfile.attendDate,
+      flag: myProfile.flag,
+      countReport: myProfile.countReport,
+      friendIds: myProfile.friendIds,
+      followingIds: myProfile.followingIds,
+      followerIds: myProfile.followerIds,
+      bestFriendIds: myProfile.bestFriendIds,
+      blockedIds: myProfile.blockedIds,
+      postIds: myProfile.postIds,
+      createAt: myProfile.createAt,
+      createBy: myProfile.createBy,
+      status: myProfile.status,
+      saveIds: myProfile.saveIds,
+      likeIds: myProfile.likeIds,
+    };
+
+    return result;
   } catch (error) {
     console.log(error);
     throw error;
@@ -332,7 +521,7 @@ export async function getMyPosts(id: String | undefined) {
         path: "postIds",
         model: Post,
       })
-      .select("postIds"); // Only select the 'postIds' field
+      .select("postIds");
 
     if (!user) {
       console.log(`Cannot get ${id} posts now`);
@@ -363,8 +552,41 @@ export async function getMyFriends(id: String | undefined) {
       _id: { $in: user.friendIds }, // Lấy danh sách bạn bè theo ObjectId
     });
 
-    console.log(friends); // Kiểm tra danh sách bạn bè
-    return friends;
+    const result: UserResponseDTO[] = friends.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -381,12 +603,45 @@ export async function getMyBffs(id: String | undefined) {
       console.log(`Cannot get ${id} bestFriends now`);
       throw new Error(`Cannot get ${id} bestFriends now`);
     }
-    const bestFriends = await User.find({
+    const bestFriends: UserResponseDTO[] = await User.find({
       _id: { $in: user.bestFriendIds },
     });
 
-    console.log(bestFriends);
-    return bestFriends;
+    const result: UserResponseDTO[] = bestFriends.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -406,11 +661,45 @@ export async function getMyFollowings(id: String | undefined) {
     }
 
     // Truy vấn danh sách bạn bè dựa trên friendIds
-    const followings = await User.find({
+    const followings: UserResponseDTO[] = await User.find({
       _id: { $in: user.followingIds }, // Lấy danh sách bạn bè theo ObjectId
     });
 
-    return followings;
+    const result: UserResponseDTO[] = followings.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -430,11 +719,45 @@ export async function getMyFollowers(id: String | undefined) {
     }
 
     // Truy vấn danh sách bạn bè dựa trên friendIds
-    const follower = await User.find({
+    const followers: UserResponseDTO[] = await User.find({
       _id: { $in: user.followerIds }, // Lấy danh sách bạn bè theo ObjectId
     });
 
-    return follower;
+    const result: UserResponseDTO[] = followers.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -452,12 +775,45 @@ export async function getMyBlocks(id: String | undefined) {
       throw new Error(`Cannot get ${id} blockeds now`);
     }
 
-    const blockeds = await User.find({
+    const blockeds: UserResponseDTO[] = await User.find({
       _id: { $in: user.blockedIds },
     });
 
-    console.log(blockeds);
-    return blockeds;
+    const result: UserResponseDTO[] = blockeds.map((user) => ({
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -705,3 +1061,46 @@ export async function getMyLikedPosts(id: String | undefined) {
     throw error;
   }
 }
+
+export const findUserByPhoneNumber = async (phoneNumber: string) => {
+  try {
+    const user = await User.findOne({ phoneNumber });
+    const result: UserResponseDTO = {
+      _id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickName: user.nickName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      background: user.background,
+      gender: user.gender,
+      address: user.address,
+      job: user.job,
+      hobbies: user.hobbies,
+      bio: user.bio,
+      point: user.point,
+      relationShip: user.relationShip,
+      birthDay: user.birthDay,
+      attendDate: user.attendDate,
+      flag: user.flag,
+      countReport: user.countReport,
+      friendIds: user.friendIds,
+      followingIds: user.followingIds,
+      followerIds: user.followerIds,
+      bestFriendIds: user.bestFriendIds,
+      blockedIds: user.blockedIds,
+      postIds: user.postIds,
+      createAt: user.createAt,
+      createBy: user.createBy,
+      status: user.status,
+      saveIds: user.saveIds,
+      likeIds: user.likeIds,
+    };
+
+    return result;
+  } catch (error: any) {
+    throw new Error(`Error finding user by phone number: ${error.message}`);
+  }
+};
