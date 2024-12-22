@@ -14,7 +14,7 @@ const formatPhoneNumber = (phoneNumber: string): string => {
 };
 
 export const sendSMS = async (phoneNumber: string) => {
-  const OTP = Math.floor(100000 + Math.random() * 900000);
+  const otpCode = Math.floor(100000 + Math.random() * 900000);
   const API_KEY =
     "9b711f8223b2abb560e2bee66b08e9b5-1fc5ccf0-7349-4d96-a97f-b14f3ae45de6";
   const BASE_URL = "https://wglmk8.api.infobip.com";
@@ -30,7 +30,7 @@ export const sendSMS = async (phoneNumber: string) => {
               to: formattedPhoneNumber,
             },
           ],
-          text: `Your OTP code is: ${OTP}`,
+          text: `Your OTP code is: ${otpCode}`,
         },
       ],
     };
@@ -42,8 +42,14 @@ export const sendSMS = async (phoneNumber: string) => {
       },
     });
 
+    await OTP.create({
+      code: otpCode,
+      receiver: formattedPhoneNumber,
+      createAt: new Date(),
+      expiredAt: new Date(Date.now() + 5 * 60 * 1000), // OTP hết hạn sau 5 phút
+    });
+
     return {
-      otp: OTP,
       message: "OTP sent successfully",
       response: response.data,
     };
@@ -75,3 +81,37 @@ export async function checkToken(rareToken: string) {
     throw error;
   }
 }
+
+export const verifyOTP = async (phoneNumber: string, inputCode: string) => {
+  try {
+    const formattedPhoneNumber = formatPhoneNumber(phoneNumber);
+
+    const otpRecord = await OTP.findOne({
+      receiver: formattedPhoneNumber,
+    })
+      .sort({ createAt: -1 })
+      .exec();
+
+    if (!otpRecord) {
+      throw new Error("OTP not found or expired");
+    }
+
+    if (new Date() > otpRecord.expiredAt) {
+      throw new Error("OTP has expired");
+    }
+
+    if (otpRecord.code !== inputCode) {
+      throw new Error("Invalid OTP code");
+    }
+
+    return {
+      success: true,
+      message: "OTP verified successfully",
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || "Failed to verify OTP",
+    };
+  }
+};

@@ -2,7 +2,7 @@ import { Schema, models, model, Document } from "mongoose";
 
 export interface IOTP extends Document {
   code: string;
-  sender: string;
+  // sender: string;
   receiver: string;
   createAt: Date;
   expiredAt: Date;
@@ -10,7 +10,7 @@ export interface IOTP extends Document {
 
 const OTPSchema = new Schema({
   code: { type: String, required: true },
-  sender: { type: String, required: true },
+  // sender: { type: String, required: true },
   receiver: { type: String, required: true },
   createAt: { type: Date, required: true, default: new Date() },
   expiredAt: {
