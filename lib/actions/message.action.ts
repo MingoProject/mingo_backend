@@ -14,6 +14,7 @@ import {
   ResponseMessageDTO,
   PusherRevoke,
   PusherDelete,
+  StatusResponse,
 } from "@/dtos/MessageDTO";
 import mongoose, { Schema, Types } from "mongoose";
 import User from "@/database/user.model";
@@ -321,26 +322,37 @@ export async function createMessage(
 //   if (!Array.isArray(membersIds) || membersIds.length === 0) {
 //     throw new Error("membersIds must be a non-empty array");
 //   }
+
+//   // Kiểm tra leader có tồn tại
 //   const leaderExist = await User.exists({ _id: leaderId });
 //   if (!leaderExist) {
 //     throw new Error("Leader ID does not exist");
 //   }
-//   const allMembersExist = await User.exists({ _id: { $in: membersIds } });
-//   if (!allMembersExist) {
+
+//   // Kiểm tra tất cả các thành viên có tồn tại
+//   const allMembersExist = await User.countDocuments({
+//     _id: { $in: membersIds },
+//   });
+//   if (allMembersExist !== membersIds.length) {
 //     throw new Error("One or more member IDs do not exist");
 //   }
 
+//   // Kiểm tra sự tồn tại của nhóm với các thành viên trùng lặp
 //   const existMessageBox = await MessageBox.findOne({
-//     receiverIds: { $all: membersIds },
-//   })
-//     .where("receiverIds")
-//     .size(membersIds.length);
+//     $and: [
+//       { receiverIds: { $all: membersIds } }, // Bao gồm tất cả các thành viên
+//       { receiverIds: { $size: membersIds.length } }, // Đảm bảo số lượng thành viên khớp
+//     ],
+//   });
 
 //   if (existMessageBox) {
-//     throw new Error("Exist group have same members");
+//     throw new Error("A group with the same members already exists");
 //   }
 
+//   // Tạo ObjectId cho leader
 //   const userObjectId = new Types.ObjectId(leaderId);
+
+//   // Tạo nhóm mới
 //   const messageBox = await MessageBox.create({
 //     senderId: leaderId,
 //     receiverIds: membersIds,
@@ -352,8 +364,12 @@ export async function createMessage(
 //     createBy: userObjectId,
 //     status: true,
 //   });
-//   // return { success: true, messageBoxId: messageBox._id, messageBox };
-//   return { success: true, message: "Create group successfully" };
+
+//   return {
+//     success: true,
+//     message: "Create group successfully",
+//     messageBoxId: messageBox._id,
+//   };
 // }
 
 export async function createGroup(
@@ -365,53 +381,43 @@ export async function createGroup(
   if (!Array.isArray(membersIds) || membersIds.length === 0) {
     throw new Error("membersIds must be a non-empty array");
   }
-
-  // Kiểm tra leader có tồn tại
   const leaderExist = await User.exists({ _id: leaderId });
   if (!leaderExist) {
     throw new Error("Leader ID does not exist");
   }
-
-  // Kiểm tra tất cả các thành viên có tồn tại
-  const allMembersExist = await User.countDocuments({
-    _id: { $in: membersIds },
-  });
-  if (allMembersExist !== membersIds.length) {
+  const allMembersExist = await User.exists({ _id: { $in: membersIds } });
+  if (!allMembersExist) {
     throw new Error("One or more member IDs do not exist");
   }
-
-  // Kiểm tra sự tồn tại của nhóm với các thành viên trùng lặp
+  const allReceiverIds = [leaderId, ...membersIds];
   const existMessageBox = await MessageBox.findOne({
-    $and: [
-      { receiverIds: { $all: membersIds } }, // Bao gồm tất cả các thành viên
-      { receiverIds: { $size: membersIds.length } }, // Đảm bảo số lượng thành viên khớp
-    ],
+    receiverIds: { $size: allReceiverIds.length, $all: allReceiverIds }
   });
 
   if (existMessageBox) {
-    throw new Error("A group with the same members already exists");
+    return {
+      success: false,
+      message: "Box is existed.",
+      existMessageBox
+    };
   }
 
-  // Tạo ObjectId cho leader
   const userObjectId = new Types.ObjectId(leaderId);
-
-  // Tạo nhóm mới
-  const messageBox = await MessageBox.create({
+  const messageBox: MessageBoxDTO = await MessageBox.create({
     senderId: leaderId,
-    receiverIds: membersIds,
+    receiverIds: [leaderId, ...membersIds],
     messageIds: [],
     groupName: groupName,
     groupAva: groupAva,
     flag: true,
     pin: false,
-    createBy: userObjectId,
-    status: true,
+    createBy: userObjectId
   });
-
+  // return { success: true, messageBoxId: messageBox._id, messageBox };
   return {
     success: true,
-    message: "Create group successfully",
-    messageBoxId: messageBox._id,
+    message: "Create box chat successfully",
+    newBox: messageBox
   };
 }
 
@@ -520,6 +526,7 @@ export async function deleteOrRevokeMessage(
     } else if (action == "delete") {
       message.visibility.set(userId, false);
       await message.save();
+      console.log(message, "delete message");
       const pusherMessage: PusherDelete = {
         id: message._id.toString(),
         flag: message.flag,
@@ -733,6 +740,7 @@ export async function markMessageAsRead(boxId: string, userId: string) {
       return {
         success: true,
         messages: "Messages already read",
+        lastMessage,
       };
     }
   } catch (error) {
@@ -848,7 +856,7 @@ export async function fetchBoxChat(userId: string) {
       $and: [{ receiverIds: { $in: [userId] } }, { receiverIds: { $size: 2 } }],
     }).populate(
       "receiverIds",
-      "firstName lastName nickName avatar phoneNumber"
+      "firstName lastName nickName avatar phoneNumber status"
     );
 
     if (!messageBoxes.length) {
@@ -858,7 +866,7 @@ export async function fetchBoxChat(userId: string) {
       };
     }
 
-    // Process each message box and retrieve the last message
+    //Process each message box and retrieve the last message
     const messageBoxesWithDetails: MessageBoxDTO[] = await Promise.all(
       messageBoxes.map(async (messageBox) => {
         // Filter messages with visibility true for the userId
@@ -882,6 +890,7 @@ export async function fetchBoxChat(userId: string) {
             ...messageBox.toObject(),
             lastMessage: null,
             readStatus: false,
+            status: status,
           };
         }
 
@@ -897,6 +906,7 @@ export async function fetchBoxChat(userId: string) {
             ...messageBox.toObject(),
             lastMessage: null,
             readStatus: false,
+            status: status,
           };
         }
 
@@ -914,7 +924,7 @@ export async function fetchBoxChat(userId: string) {
             : undefined,
           text: lastMessage.flag
             ? lastMessage.text[lastMessage.text.length - 1]
-            : "Message revoked",
+            : "Đã thu hồi",
           boxId: lastMessage.boxId.toString(),
           createAt: lastMessage.createAt,
           createBy: lastMessage.createBy,
@@ -960,7 +970,7 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
       .populate("senderId", "firstName lastName nickName avatar phoneNumber")
       .populate(
         "receiverIds",
-        "firstName lastName nickName avatar phoneNumber"
+        "firstName lastName nickName avatar phoneNumber status"
       );
 
     if (!messageBox) {
@@ -1026,7 +1036,10 @@ export async function fetchBoxGroup(userId: string) {
         },
       ],
     })
-      .populate("receiverIds", "firstName lastName nickName avatar phoneNumber")
+      .populate(
+        "receiverIds",
+        "firstName lastName nickName avatar phoneNumber status"
+      )
       .populate("senderId", "firstName lastName nickName avatar phoneNumber");
 
     console.log(messageBoxes);
@@ -1104,6 +1117,8 @@ export async function fetchBoxGroup(userId: string) {
         };
       })
     );
+
+    console.log(messageBoxesWithContent, "messageBoxesWithContent");
 
     return { success: true, box: messageBoxesWithContent, adminId: userId };
   } catch (error) {
@@ -1255,6 +1270,88 @@ export async function removeChatBox(boxId: string) {
     return { success: true, message: "Message removed from database" };
   } catch (error) {
     console.error("Error remove messages from database: ", error);
+    throw error;
+  }
+}
+
+export async function isOnline(userId: string) {
+  try {
+    await connectToDatabase();
+
+    const statusResponse: StatusResponse = {
+      userId: userId,
+      status: true,
+      createAt: new Date(),
+    };
+
+    if (typeof userId !== "string") {
+      throw new Error("Invalid userId format");
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid ObjectId format");
+    }
+
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+    await User.updateOne(
+      { _id: new mongoose.Types.ObjectId(userId) },
+      { $set: { status: true } }
+    );
+
+    await pusherServer
+      .trigger(`private-${userId}`, "online-status", statusResponse)
+      .then(() => console.log("Update online successfully: ", statusResponse))
+      .catch((error) => console.error("Failed to update status:", error));
+    //return { success: true, populatedMessage, detailBox };
+    return {
+      success: true,
+      message: "Update online status successfully",
+      statusResponse,
+    };
+  } catch (error) {
+    console.error("Error update status from database: ", error);
+    throw error;
+  }
+}
+
+export async function isOffline(userId: string) {
+  try {
+    await connectToDatabase();
+
+    const statusResponse: StatusResponse = {
+      userId: userId,
+      status: false,
+      createAt: new Date(),
+    };
+
+    if (typeof userId !== "string") {
+      throw new Error("Invalid userId format");
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid ObjectId format");
+    }
+
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+    await User.updateOne(
+      { _id: new mongoose.Types.ObjectId(userId) },
+      { $set: { status: false } }
+    );
+
+    await pusherServer
+      .trigger(`private-${userId}`, "offline-status", statusResponse)
+      .then(() => console.log("Update offline successfully: ", statusResponse))
+      .catch((error) => console.error("Failed to update status:", error));
+    //return { success: true, populatedMessage, detailBox };
+    return {
+      success: true,
+      message: "Update offline status successfully",
+      statusResponse,
+    };
+  } catch (error) {
+    console.error("Error update status from database: ", error);
     throw error;
   }
 }

@@ -60,6 +60,7 @@ export interface MessageBoxGroupDTO {
   createBy: string;
   lastMessage: ResponseMessageDTO;
   readStatus: boolean;
+  status: string;
 }
 
 export interface ResponseMessageBoxDTO {
@@ -124,4 +125,10 @@ export interface PusherDelete {
   action: string;
   createAt: string;
   createBy: string;
+}
+
+export interface StatusResponse {
+  userId: string;
+  status: boolean;
+  createAt: Date;
 }
