@@ -1,4 +1,4 @@
-import Comment from "@/database/comment.model";
+import Comment, { IComment } from "@/database/comment.model";
 import {
   CreateCommentDTO,
   UpdateCommentDTO,
@@ -36,6 +36,7 @@ export async function createComment(
       content: params.content,
       replies: params.replies || [],
       parentId: null,
+      originalCommentId: null,
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -70,6 +71,7 @@ export async function createReplyCommentPost(
       content: params.content,
       replies: params.replies || [],
       parentId: params.parentId || null,
+      originalCommentId: params.originalCommentId || null,
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -104,6 +106,7 @@ export async function createReplyCommentMedia(
       content: params.content,
       replies: params.replies || [],
       parentId: params.parentId || null,
+      originalCommentId: params.originalCommentId || null,
       likes: [],
       createdAt: new Date(),
       createdTime: new Date(),
@@ -125,35 +128,227 @@ export async function createReplyCommentMedia(
   }
 }
 
-export async function deleteComment(commentId: string, postId: string) {
+export async function deleteCommentReply(
+  commentId: string,
+  originalCommentId: string,
+  postId: string
+) {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
-    // Xóa comment khỏi Comment model
-    const deleteComment = await Comment.findByIdAndDelete(commentId);
-    if (!deleteComment) {
+    // Tìm comment cần xóa (commentId)
+    const commentToDelete = await Comment.findById(commentId);
+    if (!commentToDelete) {
       return {
         status: false,
         message: `Comment with ID ${commentId} does not exist.`,
       };
     }
-
-    // Cập nhật Post để xóa comment khỏi danh sách comments
+    const repliesToDelete = await Comment.find({ parentId: commentId });
+    const repliesIds = repliesToDelete.map((reply) => reply._id);
+    await Comment.deleteMany({ parentId: commentId });
+    await Comment.findByIdAndDelete(commentId);
     await Post.findByIdAndUpdate(
       postId,
       {
-        $pull: { comments: commentId }, // Xóa commentId khỏi array comments
+        $pull: { comments: { $in: [commentId, ...repliesIds] } },
+      },
+      { new: true }
+    );
+    await Comment.findByIdAndUpdate(
+      originalCommentId,
+      {
+        $pull: { replies: { $in: [commentId, ...repliesIds] } },
       },
       { new: true }
     );
 
     return {
       status: true,
-      message: `Comment with ID ${commentId} has been deleted from post.`,
+      message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+    };
+  } catch (error: any) {
+    console.error(error);
+    return {
+      status: false,
+      message: `An error occurred: ${error.message}`,
+    };
+  }
+}
+
+export async function deleteCommentReplyMedia(
+  commentId: string,
+  originalCommentId: string,
+  mediaId: string
+) {
+  try {
+    await connectToDatabase();
+
+    // Tìm comment cần xóa (commentId)
+    const commentToDelete = await Comment.findById(commentId);
+    if (!commentToDelete) {
+      return {
+        status: false,
+        message: `Comment with ID ${commentId} does not exist.`,
+      };
+    }
+    const repliesToDelete = await Comment.find({ parentId: commentId });
+    const repliesIds = repliesToDelete.map((reply) => reply._id);
+    await Comment.deleteMany({ parentId: commentId });
+    await Comment.findByIdAndDelete(commentId);
+    await Post.findByIdAndUpdate(
+      mediaId,
+      {
+        $pull: { comments: { $in: [commentId, ...repliesIds] } },
+      },
+      { new: true }
+    );
+    await Comment.findByIdAndUpdate(
+      originalCommentId,
+      {
+        $pull: { replies: { $in: [commentId, ...repliesIds] } },
+      },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+    };
+  } catch (error: any) {
+    console.error(error);
+    return {
+      status: false,
+      message: `An error occurred: ${error.message}`,
+    };
+  }
+}
+// try {
+//   // Tìm comment theo ID để lấy danh sách replies
+//   const comment = await Comment.findById(commentId).lean();
+//   if (!comment) {
+//     return { success: false, message: 'Comment không tồn tại.' };
+//   }
+
+//   // Xóa comment gốc và các replies của nó
+//   const replyIds = comment.replies || []; // Lấy danh sách replies từ trường `replies`
+//   await Comment.deleteMany({ _id: { $in: [commentId, ...replyIds] } });
+
+//   return { success: true, message: 'Comment và các replies trực tiếp đã được xóa.' };
+// } catch (error) {
+//   console.error('Lỗi khi xóa comment và các replies trực tiếp:', error);
+//   return { success: false, message: 'Xóa comment thất bại.' };
+// }
+
+// export async function deleteComment(commentId: string, postId: string) {
+//   try {
+//     connectToDatabase();
+
+//     // Xóa comment khỏi Comment model
+//     const deleteComment = await Comment.findByIdAndDelete(commentId);
+//     if (!deleteComment) {
+//       return {
+//         status: false,
+//         message: `Comment with ID ${commentId} does not exist.`,
+//       };
+//     }
+
+//     // Cập nhật Post để xóa comment khỏi danh sách comments
+//     await Post.findByIdAndUpdate(
+//       postId,
+//       {
+//         $pull: { comments: commentId }, // Xóa commentId khỏi array comments
+//       },
+//       { new: true }
+//     );
+
+//     return {
+//       status: true,
+//       message: `Comment with ID ${commentId} has been deleted from post.`,
+//     };
+//   } catch (error) {
+//     console.error(error);
+//     throw error;
+//   }
+// }
+
+export async function deleteComment(commentId: string, postId: string) {
+  try {
+    await connectToDatabase();
+
+    const comment = (await Comment.findById(
+      commentId
+    ).lean()) as IComment | null;
+    if (!comment) {
+      return {
+        status: false,
+        message: `Comment with ID ${commentId} does not exist.`,
+      };
+    }
+
+    const replies = comment.replies || [];
+
+    const idsToDelete = [commentId, ...replies];
+    await Comment.deleteMany({ _id: { $in: idsToDelete } });
+
+    await Post.findByIdAndUpdate(
+      postId,
+      {
+        $pull: { comments: { $in: idsToDelete } },
+      },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Comment with ID ${commentId} and its replies have been deleted from post.`,
     };
   } catch (error) {
-    console.error(error);
-    throw error;
+    console.error("Error deleting comment:", error);
+    return {
+      status: false,
+      message: "Error occurred while deleting comment.",
+    };
+  }
+}
+
+export async function deleteCommentMedia(commentId: string, mediaId: string) {
+  try {
+    await connectToDatabase();
+
+    const comment = (await Comment.findById(
+      commentId
+    ).lean()) as IComment | null;
+    if (!comment) {
+      return {
+        status: false,
+        message: `Comment with ID ${commentId} does not exist.`,
+      };
+    }
+
+    const replies = comment.replies || [];
+
+    const idsToDelete = [commentId, ...replies];
+    await Comment.deleteMany({ _id: { $in: idsToDelete } });
+
+    await Post.findByIdAndUpdate(
+      mediaId,
+      {
+        $pull: { comments: { $in: idsToDelete } },
+      },
+      { new: true }
+    );
+
+    return {
+      status: true,
+      message: `Comment with ID ${commentId} and its replies have been deleted from post.`,
+    };
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    return {
+      status: false,
+      message: "Error occurred while deleting comment.",
+    };
   }
 }
 
@@ -390,6 +585,7 @@ export async function createCommentMedia(
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
       parentId: null,
+      originalCommentId: null,
     });
 
     const media = await Media.findByIdAndUpdate(
@@ -407,35 +603,35 @@ export async function createCommentMedia(
   }
 }
 
-export async function deleteCommentMedia(commentId: string, mediaId: string) {
-  try {
-    connectToDatabase();
+// export async function deleteCommentMedia(commentId: string, mediaId: string) {
+//   try {
+//     connectToDatabase();
 
-    const deleteComment = await Comment.findByIdAndDelete(commentId);
-    if (!deleteComment) {
-      return {
-        status: false,
-        message: `Comment with ID ${commentId} does not exist.`,
-      };
-    }
+//     const deleteComment = await Comment.findByIdAndDelete(commentId);
+//     if (!deleteComment) {
+//       return {
+//         status: false,
+//         message: `Comment with ID ${commentId} does not exist.`,
+//       };
+//     }
 
-    await Media.findByIdAndUpdate(
-      mediaId,
-      {
-        $pull: { comments: commentId },
-      },
-      { new: true }
-    );
+//     await Media.findByIdAndUpdate(
+//       mediaId,
+//       {
+//         $pull: { comments: commentId },
+//       },
+//       { new: true }
+//     );
 
-    return {
-      status: true,
-      message: `Comment with ID ${commentId} has been deleted from media.`,
-    };
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
+//     return {
+//       status: true,
+//       message: `Comment with ID ${commentId} has been deleted from media.`,
+//     };
+//   } catch (error) {
+//     console.error(error);
+//     throw error;
+//   }
+// }
 
 export const getRepliesByCommentId = async (
   commentId: string

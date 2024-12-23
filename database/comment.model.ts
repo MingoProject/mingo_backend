@@ -6,9 +6,10 @@ export interface IComment extends Document, IAudit {
   userId: mongoose.Schema.Types.ObjectId;
   content: string;
   createdAt: Date;
-  replies?: IComment[];
+  replies?: mongoose.Types.ObjectId[];
   likes?: mongoose.Schema.Types.ObjectId[];
   parentId?: mongoose.Schema.Types.ObjectId;
+  originalCommentId?: mongoose.Schema.Types.ObjectId;
 }
 
 const CommentSchema = new Schema<IComment>({
@@ -22,6 +23,10 @@ const CommentSchema = new Schema<IComment>({
     ref: "Comment",
   },
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  originalCommentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Comment",
+  },
 });
 
 CommentSchema.add(AuditSchema);

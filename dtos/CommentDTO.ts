@@ -13,6 +13,7 @@ export interface CreateCommentDTO {
   content: string;
   replies?: Schema.Types.ObjectId[];
   parentId?: Schema.Types.ObjectId;
+  originalCommentId?: Schema.Types.ObjectId;
 }
 
 export interface CommentResponseDTO {
@@ -25,4 +26,5 @@ export interface CommentResponseDTO {
   createBy: Schema.Types.ObjectId;
   createAt: Date;
   parentId: Schema.Types.ObjectId;
+  originalCommentId: Schema.Types.ObjectId;
 }
