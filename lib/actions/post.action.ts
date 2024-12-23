@@ -67,7 +67,21 @@ export async function createPost(
       );
     }
 
-    return newPost as PostResponseDTO;
+    const populatedPost = await Post.findById(newPost._id)
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar", // Chỉ lấy các trường cần thiết
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar", // Ví dụ: lấy id và tên tag
+      })
+      .populate({
+        path: "media",
+        select: "_id url type", // Ví dụ: lấy id và url của media
+      });
+
+    return populatedPost;
   } catch (error) {
     console.error(error);
     throw error;
@@ -637,6 +651,7 @@ export async function getPostById(
     throw error;
   }
 }
+
 export async function getManagementPostById(
   postId: string
 ): Promise<MangementPostResponseDTO | null> {

@@ -1104,3 +1104,20 @@ export const findUserByPhoneNumber = async (phoneNumber: string) => {
     throw new Error(`Error finding user by phone number: ${error.message}`);
   }
 };
+
+export const forgetPassword = async (
+  phoneNumber: string,
+  newPassword: string
+) => {
+  const user = await User.findOne({ phoneNumber });
+
+  if (!user) {
+    throw new Error("User with this phone number does not exist.");
+  }
+  const hashPassword = await bcrypt.hash(newPassword, saltRounds);
+
+  user.password = hashPassword;
+  await user.save();
+
+  return { message: "Password updated successfully" };
+};
