@@ -60,6 +60,7 @@ export interface MessageBoxGroupDTO {
   createBy: string;
   lastMessage: ResponseMessageDTO;
   readStatus: boolean;
+  status: string;
 }
 
 export interface ResponseMessageBoxDTO {
@@ -77,6 +78,20 @@ export interface ResponseMessageDTO {
   createAt: string;
   createBy: string;
   isReact: boolean;
+}
+
+export interface ResponseGroupMessageDTO {
+  id: string;
+  flag: boolean;
+  readedId: string[];
+  contentId: FileContent;
+  text: string;
+  boxId: string;
+  createAt: string;
+  createBy: string;
+  isReact: boolean;
+  createName: string;
+  createAvatar: string;
 }
 
 export interface DetailMessageBoxDTO {
@@ -124,4 +139,10 @@ export interface PusherDelete {
   action: string;
   createAt: string;
   createBy: string;
+}
+
+export interface StatusResponse {
+  userId: string;
+  status: boolean;
+  createAt: Date;
 }
