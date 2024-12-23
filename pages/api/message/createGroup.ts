@@ -37,6 +37,7 @@ export default async function handler(
           const membersIds = Array.isArray(fields.membersIds)
             ? JSON.parse(fields.membersIds[0] as string)
             : [];
+
           if (
             !Array.isArray(membersIds) ||
             membersIds.some((id) => typeof id !== "string")

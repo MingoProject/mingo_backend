@@ -15,6 +15,7 @@ import {
   PusherRevoke,
   PusherDelete,
   StatusResponse,
+  ResponseGroupMessageDTO,
 } from "@/dtos/MessageDTO";
 import mongoose, { Schema, Types } from "mongoose";
 import User from "@/database/user.model";
@@ -145,6 +146,234 @@ async function createContent(
   return message;
 }
 
+// export async function createMessage(
+//   data: RequestSendMessageDTO,
+//   files: formidable.Files,
+//   userId: string
+// ) {
+//   try {
+//     await connectToDatabase();
+//     const userObjectId = new Types.ObjectId(userId);
+
+//     // eslint-disable-next-line prefer-const
+//     let detailBox = await MessageBox.findById(data.boxId);
+//     if (detailBox) {
+//       const receiverIdsArray = detailBox.receiverIds;
+
+//       if (receiverIdsArray.length > 2) {
+//         const membersIds: string[] = [
+//           ...receiverIdsArray.map((id: { toString: () => any }) =>
+//             id.toString()
+//           ),
+//           detailBox.senderId.toString(),
+//         ];
+//         const leaderExists = membersIds.includes(userId);
+//         if (!leaderExists) {
+//           throw new Error("UserId must be in MembersId list");
+//         }
+
+//         const message = await createContent(data, files, userId, membersIds);
+//         const populatedMessage = await Message.findById(message._id).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//           options: { strictPopulate: false },
+//         });
+
+//         detailBox = await MessageBox.findByIdAndUpdate(
+//           data.boxId,
+//           {
+//             $push: { messageIds: message._id },
+//             $set: { senderId: userId },
+//           },
+//           { new: true }
+//         );
+//         if (!detailBox) {
+//           throw new Error("Group MessageBox cannot update");
+//         }
+
+//         const pusherMessage: ResponseGroupMessageDTO = {
+//           id: populatedMessage._id.toString(),
+//           flag: true,
+//           isReact: false,
+//           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//           contentId:
+//             populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//           text: populatedMessage.text[populatedMessage.text.length - 1],
+//           boxId: data.boxId,
+//           // Chuyển ObjectId sang chuỗi
+//           createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//           createBy: populatedMessage.createBy._id,
+//         };
+
+//         await pusherServer
+//           .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+//           .then(() => console.log("Message sent successfully: ", pusherMessage))
+//           .catch((error) => console.error("Failed to send message:", error));
+//         //return { success: true, populatedMessage, detailBox };
+//         return { success: true, message: "Send successfully" };
+//       } else {
+//         const [stUserId, ndUserId] = [receiverIdsArray[0], userId].sort();
+//         const relationBlock = await Relation.findOne({
+//           stUser: stUserId,
+//           ndUser: ndUserId,
+//           relation: "block",
+//         });
+//         if (relationBlock) {
+//           throw new Error("Sender is blocked by Receiver");
+//         }
+//         const membersIds: string[] = [
+//           ...receiverIdsArray.map((id: { toString: () => any }) =>
+//             id.toString()
+//           ),
+//           detailBox.senderId.toString(),
+//         ];
+//         const message = await createContent(data, files, userId, membersIds);
+//         detailBox = await MessageBox.findByIdAndUpdate(
+//           detailBox._id,
+//           {
+//             $push: { messageIds: message._id },
+//             $set: { senderId: userId },
+//             $addToSet: { receiverIds: userId },
+//           },
+//           { new: true }
+//         );
+//         const populatedMessage = await Message.findById(message._id).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//           options: { strictPopulate: false },
+//         });
+
+//         const pusherMessage: ResponseGroupMessageDTO = {
+//           id: populatedMessage._id.toString(),
+//           flag: true,
+//           isReact: false,
+//           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//           contentId:
+//             populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//           text: populatedMessage.text[populatedMessage.text.length - 1],
+//           boxId: data.boxId,
+//           // Chuyển ObjectId sang chuỗi
+//           createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//           createBy: populatedMessage.createBy._id,
+//         };
+
+//         await pusherServer
+//           .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+//           .then(() => console.log("Message sent successfully: ", pusherMessage))
+//           .catch((error) => console.error("Failed to send message:", error));
+
+//         // return { success: true, populatedMessage, detailBox };
+//         return { success: true, message: "Send successfully" };
+//       }
+//     } else {
+//       const message = await createContent(data, files, userId, [
+//         userId,
+//         data.boxId,
+//       ]);
+//       const populatedMessage = await Message.findById(message._id).populate({
+//         path: "contentId",
+//         model: "File",
+//         select: "",
+//         options: { strictPopulate: false },
+//       });
+//       detailBox = await MessageBox.create({
+//         senderId: userId,
+//         receiverIds: [data.boxId, userId],
+//         messageIds: [message._id],
+//         groupName: "",
+//         groupAva: "",
+//         flag: true,
+//         pin: false,
+//         createBy: userObjectId,
+//         status: true,
+//       });
+//       const pusherMessage: ResponseGroupMessageDTO = {
+//         id: populatedMessage._id.toString(),
+//         flag: true,
+//         isReact: false,
+//         readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//         contentId:
+//           populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//         text: populatedMessage.text[populatedMessage.text.length - 1],
+//         boxId: data.boxId,
+//         // Chuyển ObjectId sang chuỗi
+//         createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//         createBy: populatedMessage.createBy._id,
+//       };
+
+//       await pusherServer
+//         .trigger(`private-${userId}`, "new-message", pusherMessage)
+//         .then(() => console.log("Message sent successfully: ", pusherMessage))
+//         .catch((error) => console.error("Failed to send message:", error));
+//       return { success: true, message: "Create new box and send successfully" };
+//     }
+//   } catch (error) {
+//     console.error("Error sending message: ", error);
+//     throw error;
+//   }
+// }
+
+export async function createBoxChat(
+  membersIds: string[],
+  leaderId: string,
+  groupName: string,
+  groupAva: string
+) {
+  if (!Array.isArray(membersIds) || membersIds.length === 0) {
+    throw new Error("membersIds must be a non-empty array");
+  }
+
+  // Kiểm tra leader có tồn tại
+  const leaderExist = await User.exists({ _id: leaderId });
+  if (!leaderExist) {
+    throw new Error("Leader ID does not exist");
+  }
+
+  // Kiểm tra tất cả các thành viên có tồn tại
+  const allMembersExist = await User.countDocuments({
+    _id: { $in: membersIds },
+  });
+  if (allMembersExist !== membersIds.length) {
+    throw new Error("One or more member IDs do not exist");
+  }
+
+  // Kiểm tra sự tồn tại của nhóm với các thành viên trùng lặp
+  const existMessageBox = await MessageBox.findOne({
+    $and: [
+      { receiverIds: { $all: membersIds } }, // Bao gồm tất cả các thành viên
+      { receiverIds: { $size: membersIds.length } }, // Đảm bảo số lượng thành viên khớp
+    ],
+  });
+
+  if (existMessageBox) {
+    throw new Error("A group with the same members already exists");
+  }
+
+  // Tạo ObjectId cho leader
+  const userObjectId = new Types.ObjectId(leaderId);
+
+  // Tạo nhóm mới
+  const messageBox = await MessageBox.create({
+    senderId: leaderId,
+    receiverIds: membersIds,
+    messageIds: [],
+    groupName: groupName,
+    groupAva: groupAva,
+    flag: true,
+    pin: false,
+    createBy: userObjectId,
+    status: true,
+  });
+
+  return {
+    success: true,
+    message: "Create group successfully",
+    messageBoxId: messageBox._id,
+  };
+}
+
 export async function createMessage(
   data: RequestSendMessageDTO,
   files: formidable.Files,
@@ -154,7 +383,6 @@ export async function createMessage(
     await connectToDatabase();
     const userObjectId = new Types.ObjectId(userId);
 
-    // eslint-disable-next-line prefer-const
     let detailBox = await MessageBox.findById(data.boxId);
     if (detailBox) {
       const receiverIdsArray = detailBox.receiverIds;
@@ -178,6 +406,14 @@ export async function createMessage(
           select: "",
           options: { strictPopulate: false },
         });
+
+        // Populate thông tin người tạo tin nhắn (createBy)
+        const populatedSender = await populatedMessage.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar",
+        });
+
         detailBox = await MessageBox.findByIdAndUpdate(
           data.boxId,
           {
@@ -190,7 +426,7 @@ export async function createMessage(
           throw new Error("Group MessageBox cannot update");
         }
 
-        const pusherMessage: ResponseMessageDTO = {
+        const pusherMessage: ResponseGroupMessageDTO = {
           id: populatedMessage._id.toString(),
           flag: true,
           isReact: false,
@@ -199,16 +435,21 @@ export async function createMessage(
             populatedMessage.contentId[populatedMessage.contentId.length - 1],
           text: populatedMessage.text[populatedMessage.text.length - 1],
           boxId: data.boxId,
-          // Chuyển ObjectId sang chuỗi
-          createAt: new Date().toISOString(), // ISO string đã hợp lệ
-          createBy: populatedMessage.createBy.toString(),
+          createAt: new Date().toISOString(),
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown",
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "",
         };
 
         await pusherServer
           .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
           .then(() => console.log("Message sent successfully: ", pusherMessage))
           .catch((error) => console.error("Failed to send message:", error));
-        //return { success: true, populatedMessage, detailBox };
+
         return { success: true, message: "Send successfully" };
       } else {
         const [stUserId, ndUserId] = [receiverIdsArray[0], userId].sort();
@@ -243,7 +484,14 @@ export async function createMessage(
           options: { strictPopulate: false },
         });
 
-        const pusherMessage: ResponseMessageDTO = {
+        // Populate thông tin người tạo tin nhắn (createBy)
+        const populatedSender = await populatedMessage.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar",
+        });
+
+        const pusherMessage: ResponseGroupMessageDTO = {
           id: populatedMessage._id.toString(),
           flag: true,
           isReact: false,
@@ -252,9 +500,14 @@ export async function createMessage(
             populatedMessage.contentId[populatedMessage.contentId.length - 1],
           text: populatedMessage.text[populatedMessage.text.length - 1],
           boxId: data.boxId,
-          // Chuyển ObjectId sang chuỗi
-          createAt: new Date().toISOString(), // ISO string đã hợp lệ
-          createBy: populatedMessage.createBy.toString(),
+          createAt: new Date().toISOString(),
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown",
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "",
         };
 
         await pusherServer
@@ -262,10 +515,10 @@ export async function createMessage(
           .then(() => console.log("Message sent successfully: ", pusherMessage))
           .catch((error) => console.error("Failed to send message:", error));
 
-        // return { success: true, populatedMessage, detailBox };
         return { success: true, message: "Send successfully" };
       }
     } else {
+      // Nếu không tìm thấy MessageBox thì tạo mới
       const message = await createContent(data, files, userId, [
         userId,
         data.boxId,
@@ -287,7 +540,15 @@ export async function createMessage(
         createBy: userObjectId,
         status: true,
       });
-      const pusherMessage: ResponseMessageDTO = {
+
+      // Populate thông tin người tạo tin nhắn (createBy)
+      const populatedSender = await populatedMessage.populate({
+        path: "createBy",
+        model: "User",
+        select: "firstName lastName avatar",
+      });
+
+      const pusherMessage: ResponseGroupMessageDTO = {
         id: populatedMessage._id.toString(),
         flag: true,
         isReact: false,
@@ -296,15 +557,21 @@ export async function createMessage(
           populatedMessage.contentId[populatedMessage.contentId.length - 1],
         text: populatedMessage.text[populatedMessage.text.length - 1],
         boxId: data.boxId,
-        // Chuyển ObjectId sang chuỗi
-        createAt: new Date().toISOString(), // ISO string đã hợp lệ
-        createBy: populatedMessage.createBy.toString(),
+        createAt: new Date().toISOString(),
+        createBy: populatedMessage.createBy._id,
+        createName: populatedSender.createBy
+          ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+          : "Unknown",
+        createAvatar: populatedSender.createBy
+          ? populatedSender.createBy.avatar
+          : "",
       };
 
       await pusherServer
         .trigger(`private-${userId}`, "new-message", pusherMessage)
         .then(() => console.log("Message sent successfully: ", pusherMessage))
         .catch((error) => console.error("Failed to send message:", error));
+
       return { success: true, message: "Create new box and send successfully" };
     }
   } catch (error) {
@@ -312,65 +579,6 @@ export async function createMessage(
     throw error;
   }
 }
-
-// export async function createGroup(
-//   membersIds: string[],
-//   leaderId: string,
-//   groupName: string,
-//   groupAva: string
-// ) {
-//   if (!Array.isArray(membersIds) || membersIds.length === 0) {
-//     throw new Error("membersIds must be a non-empty array");
-//   }
-
-//   // Kiểm tra leader có tồn tại
-//   const leaderExist = await User.exists({ _id: leaderId });
-//   if (!leaderExist) {
-//     throw new Error("Leader ID does not exist");
-//   }
-
-//   // Kiểm tra tất cả các thành viên có tồn tại
-//   const allMembersExist = await User.countDocuments({
-//     _id: { $in: membersIds },
-//   });
-//   if (allMembersExist !== membersIds.length) {
-//     throw new Error("One or more member IDs do not exist");
-//   }
-
-//   // Kiểm tra sự tồn tại của nhóm với các thành viên trùng lặp
-//   const existMessageBox = await MessageBox.findOne({
-//     $and: [
-//       { receiverIds: { $all: membersIds } }, // Bao gồm tất cả các thành viên
-//       { receiverIds: { $size: membersIds.length } }, // Đảm bảo số lượng thành viên khớp
-//     ],
-//   });
-
-//   if (existMessageBox) {
-//     throw new Error("A group with the same members already exists");
-//   }
-
-//   // Tạo ObjectId cho leader
-//   const userObjectId = new Types.ObjectId(leaderId);
-
-//   // Tạo nhóm mới
-//   const messageBox = await MessageBox.create({
-//     senderId: leaderId,
-//     receiverIds: membersIds,
-//     messageIds: [],
-//     groupName: groupName,
-//     groupAva: groupAva,
-//     flag: true,
-//     pin: false,
-//     createBy: userObjectId,
-//     status: true,
-//   });
-
-//   return {
-//     success: true,
-//     message: "Create group successfully",
-//     messageBoxId: messageBox._id,
-//   };
-// }
 
 export async function createGroup(
   membersIds: string[],
@@ -391,14 +599,14 @@ export async function createGroup(
   }
   const allReceiverIds = [leaderId, ...membersIds];
   const existMessageBox = await MessageBox.findOne({
-    receiverIds: { $size: allReceiverIds.length, $all: allReceiverIds }
+    receiverIds: { $size: allReceiverIds.length, $all: allReceiverIds },
   });
 
   if (existMessageBox) {
     return {
       success: false,
       message: "Box is existed.",
-      existMessageBox
+      existMessageBox,
     };
   }
 
@@ -411,13 +619,13 @@ export async function createGroup(
     groupAva: groupAva,
     flag: true,
     pin: false,
-    createBy: userObjectId
+    createBy: userObjectId,
   });
   // return { success: true, messageBoxId: messageBox._id, messageBox };
   return {
     success: true,
     message: "Create box chat successfully",
-    newBox: messageBox
+    newBox: messageBox,
   };
 }
 
@@ -645,6 +853,85 @@ export async function fetchMessage(boxId: string, userId: string) {
   }
 }
 
+export async function fetchGroupMessage(boxId: string, userId: string) {
+  try {
+    await connectToDatabase();
+
+    // Tìm kiếm MessageBox và populate các messageIds
+    const messageBox = await MessageBox.findById(boxId)
+      .populate("messageIds")
+      .populate("receiverIds", "firstName lastName avatar");
+
+    if (!messageBox) {
+      throw new Error("MessageBox not found");
+    }
+
+    // Lọc các tin nhắn có visibility là true đối với userId
+    const messagesWithContent: ResponseGroupMessageDTO[] = await Promise.all(
+      messageBox.messageIds.map(async (messageId: any) => {
+        // Tìm tin nhắn với messageId và kiểm tra visibility của userId
+        const message = await Message.findOne({
+          _id: messageId,
+          [`visibility.${userId}`]: true, // Kiểm tra visibility của userId
+        });
+
+        if (!message) {
+          // Nếu không tìm thấy tin nhắn có visibility đúng, bỏ qua
+          return null;
+        }
+
+        // Populate nội dung của tin nhắn
+        const populatedMessage = await message.populate({
+          path: "contentId",
+          model: "File",
+          select: "",
+          options: { strictPopulate: false },
+        });
+
+        // Populate thông tin người tạo tin nhắn
+        const populatedSender = await message.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar", // Lấy thông tin firstName, lastName, avatar
+        });
+
+        // Tạo DTO cho tin nhắn với nội dung đã populate
+        const responseMessage: ResponseGroupMessageDTO = {
+          id: populatedMessage._id,
+          flag: populatedMessage.flag,
+          isReact: populatedMessage.isReact,
+          readedId: populatedMessage.readedId,
+          contentId: populatedMessage.flag
+            ? populatedMessage.contentId[populatedMessage.contentId.length - 1]
+            : undefined,
+          text: populatedMessage.flag
+            ? populatedMessage.text[populatedMessage.text.length - 1]
+            : "Message revoked", // Nếu tin nhắn bị thu hồi
+          boxId: populatedMessage.boxId.toString(),
+          createAt: populatedMessage.createAt,
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown", // Tên đầy đủ của người tạo
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "", // Avatar của người tạo tin nhắn
+        };
+
+        return responseMessage;
+      })
+    );
+
+    // Lọc bỏ các tin nhắn không hợp lệ (null)
+    const validMessages = messagesWithContent.filter(Boolean);
+
+    return { success: true, messages: validMessages };
+  } catch (error) {
+    console.error("Error fetching messages: ", error);
+    throw error;
+  }
+}
+
 export async function checkMarkMessageAsRead(boxIds: string[], userId: string) {
   try {
     // Kết nối cơ sở dữ liệu
@@ -745,6 +1032,34 @@ export async function markMessageAsRead(boxId: string, userId: string) {
     }
   } catch (error) {
     console.error("Error marking message as read: ", error);
+    throw error;
+  }
+}
+
+export async function uploadGroupAvatar(
+  boxId: string,
+  url: string,
+  publicId: string
+) {
+  try {
+    connectToDatabase();
+    const group = await MessageBox.findById(boxId);
+    if (!group) {
+      throw new Error("BoxId not exist");
+    }
+
+    if (group.groupAvaPublicId) {
+      await cloudinary.uploader.destroy(group.groupAvaPublicId);
+      console.log("Previous avatar removed from Cloudinary");
+    }
+
+    group.groupAva = url;
+    group.groupAvaPublicId = publicId;
+    await group.save();
+
+    return { message: "Upload avatar successfully" };
+  } catch (error) {
+    console.log(error);
     throw error;
   }
 }
@@ -890,7 +1205,6 @@ export async function fetchBoxChat(userId: string) {
             ...messageBox.toObject(),
             lastMessage: null,
             readStatus: false,
-            status: status,
           };
         }
 
@@ -906,7 +1220,6 @@ export async function fetchBoxChat(userId: string) {
             ...messageBox.toObject(),
             lastMessage: null,
             readStatus: false,
-            status: status,
           };
         }
 

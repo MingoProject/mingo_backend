@@ -80,6 +80,20 @@ export interface ResponseMessageDTO {
   isReact: boolean;
 }
 
+export interface ResponseGroupMessageDTO {
+  id: string;
+  flag: boolean;
+  readedId: string[];
+  contentId: FileContent;
+  text: string;
+  boxId: string;
+  createAt: string;
+  createBy: string;
+  isReact: boolean;
+  createName: string;
+  createAvatar: string;
+}
+
 export interface DetailMessageBoxDTO {
   _id: string;
   senderId: UserInfoBox;
