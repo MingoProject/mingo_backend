@@ -196,7 +196,7 @@ export async function deleteCommentReplyMedia(
     const repliesIds = repliesToDelete.map((reply) => reply._id);
     await Comment.deleteMany({ parentId: commentId });
     await Comment.findByIdAndDelete(commentId);
-    await Post.findByIdAndUpdate(
+    await Media.findByIdAndUpdate(
       mediaId,
       {
         $pull: { comments: { $in: [commentId, ...repliesIds] } },
@@ -213,7 +213,7 @@ export async function deleteCommentReplyMedia(
 
     return {
       status: true,
-      message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+      message: `Comment with ID ${commentId} and its replies have been deleted from media, and removed from original comment replies.`,
     };
   } catch (error: any) {
     console.error(error);
@@ -331,7 +331,7 @@ export async function deleteCommentMedia(commentId: string, mediaId: string) {
     const idsToDelete = [commentId, ...replies];
     await Comment.deleteMany({ _id: { $in: idsToDelete } });
 
-    await Post.findByIdAndUpdate(
+    await Media.findByIdAndUpdate(
       mediaId,
       {
         $pull: { comments: { $in: idsToDelete } },
