@@ -38,7 +38,7 @@ export async function requestAddFriend(param: FriendRequestDTO) {
       { $addToSet: { followerIds: param.sender } }
     );
 
-    pusherServer.trigger(`user-${param.receiver}`, "friend_request", {
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
       sender: param.sender,
       message: `You have a new friend request from ${param.sender}`,
     });
@@ -80,6 +80,11 @@ export async function acceptFriendRequest(param: FriendRequestDTO) {
     await stUser.save();
     await ndUser.save();
 
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
+
     return { message: "Accepted" };
   } catch (error) {
     console.log(error);
@@ -118,6 +123,11 @@ export async function unfollowUser(param: FriendRequestDTO) {
       console.log("Relation deleted:", deletedRelation);
     }
 
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
+
     return { message: "Unfollowed successfully and relation deleted" };
   } catch (error) {
     console.error("Error in unfollowUser:", error);
@@ -155,6 +165,11 @@ export async function requestAddBFF(param: FriendRequestDTO) {
       sender: param.sender,
       receiver: param.receiver,
       createBy: param.sender,
+    });
+
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
     });
     return { message: `Request bestfriend to ${param.receiver} successfully!` };
   } catch (error) {
@@ -200,6 +215,10 @@ export async function acceptBFFRequest(param: FriendRequestDTO) {
     await stUser.save();
     await ndUser.save();
 
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
     return { message: "Accepted" };
   } catch (error) {
     console.log(error);
@@ -228,6 +247,10 @@ export async function unRequestAddBFF(param: FriendRequestDTO) {
       console.log("Relation deleted:", deletedRelation);
     }
 
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
     return { message: "Unfollowed successfully and relation deleted" };
   } catch (error) {
     console.log(error);
@@ -270,6 +293,10 @@ export async function unFriend(param: FriendRequestDTO) {
       { $pull: { bestFriendIds: param.sender } }
     );
 
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
     return { message: `Successfully unfriended ${param.receiver}.` };
   } catch (error) {
     console.error(error);
@@ -328,6 +355,10 @@ export async function block(param: FriendRequestDTO) {
     const user = await User.findById(param.sender);
     await user.blockedIds.addToSet(param.receiver);
     await user.save();
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
 
     return { message: `Blocked ${param.receiver} successfully!` };
   } catch (error) {
@@ -369,6 +400,10 @@ export async function unBFF(param: FriendRequestDTO) {
       ndUser.friendIds.addToSet(stUser._id);
       await stUser.save();
       await ndUser.save();
+      pusherServer.trigger(`user-${param.receiver}`, "friend", {
+        sender: param.sender,
+        message: `You have a new friend request from ${param.sender}`,
+      });
       return { message: "Unfriend successfully!" };
     }
   } catch (error) {
@@ -392,6 +427,10 @@ export async function unBlock(param: FriendRequestDTO) {
       { $pull: { blockedIds: param.receiver } }
     );
     await stUser.save();
+    pusherServer.trigger(`user-${param.receiver}`, "friend", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
     return { message: "Unblock successfully!" };
   } catch (error) {
     console.log(error);

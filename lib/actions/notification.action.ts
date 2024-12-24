@@ -3,10 +3,18 @@ import mongoose, { Types } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import { CreateNotificationDTO } from "@/dtos/NotificationDTO";
 import { pusherServer } from "../pusher";
+import User from "@/database/user.model";
 
 export async function createNotification(params: CreateNotificationDTO) {
   try {
     await connectToDatabase();
+
+    const sender = await User.findById(params.senderId).select(
+      "_id avatar firstName lastName"
+    );
+    if (!sender) {
+      throw new Error("Sender not found");
+    }
 
     const notification = await Notification.create({
       senderId: params.senderId,
@@ -26,6 +34,12 @@ export async function createNotification(params: CreateNotificationDTO) {
       "new-notification",
       {
         notification,
+        sender: {
+          _id: sender._id,
+          avatar: sender.avatar,
+          firstName: sender.firstName,
+          lastName: sender.lastName,
+        },
       }
     );
     return notification;

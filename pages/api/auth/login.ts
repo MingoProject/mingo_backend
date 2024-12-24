@@ -48,8 +48,8 @@ export default async function hanlder(
           username: existedUser.phoneNumber,
           roles: existedUser.roles,
         },
-        SECRET_KEY,
-        { expiresIn: "2h" }
+        SECRET_KEY
+        // { expiresIn: "2h" }
       );
 
     return res.status(200).json({
