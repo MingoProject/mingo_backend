@@ -14,6 +14,8 @@ import {
   ResponseMessageDTO,
   PusherRevoke,
   PusherDelete,
+  StatusResponse,
+  ResponseGroupMessageDTO,
 } from "@/dtos/MessageDTO";
 import mongoose, { Schema, Types } from "mongoose";
 import User from "@/database/user.model";
@@ -144,219 +146,176 @@ async function createContent(
   return message;
 }
 
-export async function createMessage(
-  data: RequestSendMessageDTO,
-  files: formidable.Files,
-  userId: string
-) {
-  try {
-    await connectToDatabase();
-    const userObjectId = new Types.ObjectId(userId);
-
-    // eslint-disable-next-line prefer-const
-    let detailBox = await MessageBox.findById(data.boxId);
-    if (detailBox) {
-      const receiverIdsArray = detailBox.receiverIds;
-
-      if (receiverIdsArray.length > 2) {
-        const membersIds: string[] = [
-          ...receiverIdsArray.map((id: { toString: () => any }) =>
-            id.toString()
-          ),
-          detailBox.senderId.toString(),
-        ];
-        const leaderExists = membersIds.includes(userId);
-        if (!leaderExists) {
-          throw new Error("UserId must be in MembersId list");
-        }
-
-        const message = await createContent(data, files, userId, membersIds);
-        const populatedMessage = await Message.findById(message._id).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-          options: { strictPopulate: false },
-        });
-        detailBox = await MessageBox.findByIdAndUpdate(
-          data.boxId,
-          {
-            $push: { messageIds: message._id },
-            $set: { senderId: userId },
-          },
-          { new: true }
-        );
-        if (!detailBox) {
-          throw new Error("Group MessageBox cannot update");
-        }
-
-        const pusherMessage: ResponseMessageDTO = {
-          id: populatedMessage._id.toString(),
-          flag: true,
-          isReact: false,
-          readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-          contentId:
-            populatedMessage.contentId[populatedMessage.contentId.length - 1],
-          text: populatedMessage.text[populatedMessage.text.length - 1],
-          boxId: data.boxId,
-          // Chuyển ObjectId sang chuỗi
-          createAt: new Date().toISOString(), // ISO string đã hợp lệ
-          createBy: populatedMessage.createBy.toString(),
-        };
-
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
-          .then(() => console.log("Message sent successfully: ", pusherMessage))
-          .catch((error) => console.error("Failed to send message:", error));
-        //return { success: true, populatedMessage, detailBox };
-        return { success: true, message: "Send successfully" };
-      } else {
-        const [stUserId, ndUserId] = [receiverIdsArray[0], userId].sort();
-        const relationBlock = await Relation.findOne({
-          stUser: stUserId,
-          ndUser: ndUserId,
-          relation: "block",
-        });
-        if (relationBlock) {
-          throw new Error("Sender is blocked by Receiver");
-        }
-        const membersIds: string[] = [
-          ...receiverIdsArray.map((id: { toString: () => any }) =>
-            id.toString()
-          ),
-          detailBox.senderId.toString(),
-        ];
-        const message = await createContent(data, files, userId, membersIds);
-        detailBox = await MessageBox.findByIdAndUpdate(
-          detailBox._id,
-          {
-            $push: { messageIds: message._id },
-            $set: { senderId: userId },
-            $addToSet: { receiverIds: userId },
-          },
-          { new: true }
-        );
-        const populatedMessage = await Message.findById(message._id).populate({
-          path: "contentId",
-          model: "File",
-          select: "",
-          options: { strictPopulate: false },
-        });
-
-        const pusherMessage: ResponseMessageDTO = {
-          id: populatedMessage._id.toString(),
-          flag: true,
-          isReact: false,
-          readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-          contentId:
-            populatedMessage.contentId[populatedMessage.contentId.length - 1],
-          text: populatedMessage.text[populatedMessage.text.length - 1],
-          boxId: data.boxId,
-          // Chuyển ObjectId sang chuỗi
-          createAt: new Date().toISOString(), // ISO string đã hợp lệ
-          createBy: populatedMessage.createBy.toString(),
-        };
-
-        await pusherServer
-          .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
-          .then(() => console.log("Message sent successfully: ", pusherMessage))
-          .catch((error) => console.error("Failed to send message:", error));
-
-        // return { success: true, populatedMessage, detailBox };
-        return { success: true, message: "Send successfully" };
-      }
-    } else {
-      const message = await createContent(data, files, userId, [
-        userId,
-        data.boxId,
-      ]);
-      const populatedMessage = await Message.findById(message._id).populate({
-        path: "contentId",
-        model: "File",
-        select: "",
-        options: { strictPopulate: false },
-      });
-      detailBox = await MessageBox.create({
-        senderId: userId,
-        receiverIds: [data.boxId, userId],
-        messageIds: [message._id],
-        groupName: "",
-        groupAva: "",
-        flag: true,
-        pin: false,
-        createBy: userObjectId,
-        status: true,
-      });
-      const pusherMessage: ResponseMessageDTO = {
-        id: populatedMessage._id.toString(),
-        flag: true,
-        isReact: false,
-        readedId: populatedMessage.readedId.map((id: any) => id.toString()),
-        contentId:
-          populatedMessage.contentId[populatedMessage.contentId.length - 1],
-        text: populatedMessage.text[populatedMessage.text.length - 1],
-        boxId: data.boxId,
-        // Chuyển ObjectId sang chuỗi
-        createAt: new Date().toISOString(), // ISO string đã hợp lệ
-        createBy: populatedMessage.createBy.toString(),
-      };
-
-      await pusherServer
-        .trigger(`private-${userId}`, "new-message", pusherMessage)
-        .then(() => console.log("Message sent successfully: ", pusherMessage))
-        .catch((error) => console.error("Failed to send message:", error));
-      return { success: true, message: "Create new box and send successfully" };
-    }
-  } catch (error) {
-    console.error("Error sending message: ", error);
-    throw error;
-  }
-}
-
-// export async function createGroup(
-//   membersIds: string[],
-//   leaderId: string,
-//   groupName: string,
-//   groupAva: string
+// export async function createMessage(
+//   data: RequestSendMessageDTO,
+//   files: formidable.Files,
+//   userId: string
 // ) {
-//   if (!Array.isArray(membersIds) || membersIds.length === 0) {
-//     throw new Error("membersIds must be a non-empty array");
-//   }
-//   const leaderExist = await User.exists({ _id: leaderId });
-//   if (!leaderExist) {
-//     throw new Error("Leader ID does not exist");
-//   }
-//   const allMembersExist = await User.exists({ _id: { $in: membersIds } });
-//   if (!allMembersExist) {
-//     throw new Error("One or more member IDs do not exist");
-//   }
+//   try {
+//     await connectToDatabase();
+//     const userObjectId = new Types.ObjectId(userId);
 
-//   const existMessageBox = await MessageBox.findOne({
-//     receiverIds: { $all: membersIds },
-//   })
-//     .where("receiverIds")
-//     .size(membersIds.length);
+//     // eslint-disable-next-line prefer-const
+//     let detailBox = await MessageBox.findById(data.boxId);
+//     if (detailBox) {
+//       const receiverIdsArray = detailBox.receiverIds;
 
-//   if (existMessageBox) {
-//     throw new Error("Exist group have same members");
+//       if (receiverIdsArray.length > 2) {
+//         const membersIds: string[] = [
+//           ...receiverIdsArray.map((id: { toString: () => any }) =>
+//             id.toString()
+//           ),
+//           detailBox.senderId.toString(),
+//         ];
+//         const leaderExists = membersIds.includes(userId);
+//         if (!leaderExists) {
+//           throw new Error("UserId must be in MembersId list");
+//         }
+
+//         const message = await createContent(data, files, userId, membersIds);
+//         const populatedMessage = await Message.findById(message._id).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//           options: { strictPopulate: false },
+//         });
+
+//         detailBox = await MessageBox.findByIdAndUpdate(
+//           data.boxId,
+//           {
+//             $push: { messageIds: message._id },
+//             $set: { senderId: userId },
+//           },
+//           { new: true }
+//         );
+//         if (!detailBox) {
+//           throw new Error("Group MessageBox cannot update");
+//         }
+
+//         const pusherMessage: ResponseGroupMessageDTO = {
+//           id: populatedMessage._id.toString(),
+//           flag: true,
+//           isReact: false,
+//           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//           contentId:
+//             populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//           text: populatedMessage.text[populatedMessage.text.length - 1],
+//           boxId: data.boxId,
+//           // Chuyển ObjectId sang chuỗi
+//           createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//           createBy: populatedMessage.createBy._id,
+//         };
+
+//         await pusherServer
+//           .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+//           .then(() => console.log("Message sent successfully: ", pusherMessage))
+//           .catch((error) => console.error("Failed to send message:", error));
+//         //return { success: true, populatedMessage, detailBox };
+//         return { success: true, message: "Send successfully" };
+//       } else {
+//         const [stUserId, ndUserId] = [receiverIdsArray[0], userId].sort();
+//         const relationBlock = await Relation.findOne({
+//           stUser: stUserId,
+//           ndUser: ndUserId,
+//           relation: "block",
+//         });
+//         if (relationBlock) {
+//           throw new Error("Sender is blocked by Receiver");
+//         }
+//         const membersIds: string[] = [
+//           ...receiverIdsArray.map((id: { toString: () => any }) =>
+//             id.toString()
+//           ),
+//           detailBox.senderId.toString(),
+//         ];
+//         const message = await createContent(data, files, userId, membersIds);
+//         detailBox = await MessageBox.findByIdAndUpdate(
+//           detailBox._id,
+//           {
+//             $push: { messageIds: message._id },
+//             $set: { senderId: userId },
+//             $addToSet: { receiverIds: userId },
+//           },
+//           { new: true }
+//         );
+//         const populatedMessage = await Message.findById(message._id).populate({
+//           path: "contentId",
+//           model: "File",
+//           select: "",
+//           options: { strictPopulate: false },
+//         });
+
+//         const pusherMessage: ResponseGroupMessageDTO = {
+//           id: populatedMessage._id.toString(),
+//           flag: true,
+//           isReact: false,
+//           readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//           contentId:
+//             populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//           text: populatedMessage.text[populatedMessage.text.length - 1],
+//           boxId: data.boxId,
+//           // Chuyển ObjectId sang chuỗi
+//           createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//           createBy: populatedMessage.createBy._id,
+//         };
+
+//         await pusherServer
+//           .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+//           .then(() => console.log("Message sent successfully: ", pusherMessage))
+//           .catch((error) => console.error("Failed to send message:", error));
+
+//         // return { success: true, populatedMessage, detailBox };
+//         return { success: true, message: "Send successfully" };
+//       }
+//     } else {
+//       const message = await createContent(data, files, userId, [
+//         userId,
+//         data.boxId,
+//       ]);
+//       const populatedMessage = await Message.findById(message._id).populate({
+//         path: "contentId",
+//         model: "File",
+//         select: "",
+//         options: { strictPopulate: false },
+//       });
+//       detailBox = await MessageBox.create({
+//         senderId: userId,
+//         receiverIds: [data.boxId, userId],
+//         messageIds: [message._id],
+//         groupName: "",
+//         groupAva: "",
+//         flag: true,
+//         pin: false,
+//         createBy: userObjectId,
+//         status: true,
+//       });
+//       const pusherMessage: ResponseGroupMessageDTO = {
+//         id: populatedMessage._id.toString(),
+//         flag: true,
+//         isReact: false,
+//         readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+//         contentId:
+//           populatedMessage.contentId[populatedMessage.contentId.length - 1],
+//         text: populatedMessage.text[populatedMessage.text.length - 1],
+//         boxId: data.boxId,
+//         // Chuyển ObjectId sang chuỗi
+//         createAt: new Date().toISOString(), // ISO string đã hợp lệ
+//         createBy: populatedMessage.createBy._id,
+//       };
+
+//       await pusherServer
+//         .trigger(`private-${userId}`, "new-message", pusherMessage)
+//         .then(() => console.log("Message sent successfully: ", pusherMessage))
+//         .catch((error) => console.error("Failed to send message:", error));
+//       return { success: true, message: "Create new box and send successfully" };
+//     }
+//   } catch (error) {
+//     console.error("Error sending message: ", error);
+//     throw error;
 //   }
-
-//   const userObjectId = new Types.ObjectId(leaderId);
-//   const messageBox = await MessageBox.create({
-//     senderId: leaderId,
-//     receiverIds: membersIds,
-//     messageIds: [],
-//     groupName: groupName,
-//     groupAva: groupAva,
-//     flag: true,
-//     pin: false,
-//     createBy: userObjectId,
-//     status: true,
-//   });
-//   // return { success: true, messageBoxId: messageBox._id, messageBox };
-//   return { success: true, message: "Create group successfully" };
 // }
 
-export async function createGroup(
+export async function createBoxChat(
   membersIds: string[],
   leaderId: string,
   groupName: string,
@@ -412,6 +371,261 @@ export async function createGroup(
     success: true,
     message: "Create group successfully",
     messageBoxId: messageBox._id,
+  };
+}
+
+export async function createMessage(
+  data: RequestSendMessageDTO,
+  files: formidable.Files,
+  userId: string
+) {
+  try {
+    await connectToDatabase();
+    const userObjectId = new Types.ObjectId(userId);
+
+    let detailBox = await MessageBox.findById(data.boxId);
+    if (detailBox) {
+      const receiverIdsArray = detailBox.receiverIds;
+
+      if (receiverIdsArray.length > 2) {
+        const membersIds: string[] = [
+          ...receiverIdsArray.map((id: { toString: () => any }) =>
+            id.toString()
+          ),
+          detailBox.senderId.toString(),
+        ];
+        const leaderExists = membersIds.includes(userId);
+        if (!leaderExists) {
+          throw new Error("UserId must be in MembersId list");
+        }
+
+        const message = await createContent(data, files, userId, membersIds);
+        const populatedMessage = await Message.findById(message._id).populate({
+          path: "contentId",
+          model: "File",
+          select: "",
+          options: { strictPopulate: false },
+        });
+
+        // Populate thông tin người tạo tin nhắn (createBy)
+        const populatedSender = await populatedMessage.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar",
+        });
+
+        detailBox = await MessageBox.findByIdAndUpdate(
+          data.boxId,
+          {
+            $push: { messageIds: message._id },
+            $set: { senderId: userId },
+          },
+          { new: true }
+        );
+        if (!detailBox) {
+          throw new Error("Group MessageBox cannot update");
+        }
+
+        const pusherMessage: ResponseGroupMessageDTO = {
+          id: populatedMessage._id.toString(),
+          flag: true,
+          isReact: false,
+          readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+          contentId:
+            populatedMessage.contentId[populatedMessage.contentId.length - 1],
+          text: populatedMessage.text[populatedMessage.text.length - 1],
+          boxId: data.boxId,
+          createAt: new Date().toISOString(),
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown",
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "",
+        };
+
+        await pusherServer
+          .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+          .then(() => console.log("Message sent successfully: ", pusherMessage))
+          .catch((error) => console.error("Failed to send message:", error));
+
+        return { success: true, message: "Send successfully" };
+      } else {
+        const [stUserId, ndUserId] = [receiverIdsArray[0], userId].sort();
+        const relationBlock = await Relation.findOne({
+          stUser: stUserId,
+          ndUser: ndUserId,
+          relation: "block",
+        });
+        if (relationBlock) {
+          throw new Error("Sender is blocked by Receiver");
+        }
+        const membersIds: string[] = [
+          ...receiverIdsArray.map((id: { toString: () => any }) =>
+            id.toString()
+          ),
+          detailBox.senderId.toString(),
+        ];
+        const message = await createContent(data, files, userId, membersIds);
+        detailBox = await MessageBox.findByIdAndUpdate(
+          detailBox._id,
+          {
+            $push: { messageIds: message._id },
+            $set: { senderId: userId },
+            $addToSet: { receiverIds: userId },
+          },
+          { new: true }
+        );
+        const populatedMessage = await Message.findById(message._id).populate({
+          path: "contentId",
+          model: "File",
+          select: "",
+          options: { strictPopulate: false },
+        });
+
+        // Populate thông tin người tạo tin nhắn (createBy)
+        const populatedSender = await populatedMessage.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar",
+        });
+
+        const pusherMessage: ResponseGroupMessageDTO = {
+          id: populatedMessage._id.toString(),
+          flag: true,
+          isReact: false,
+          readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+          contentId:
+            populatedMessage.contentId[populatedMessage.contentId.length - 1],
+          text: populatedMessage.text[populatedMessage.text.length - 1],
+          boxId: data.boxId,
+          createAt: new Date().toISOString(),
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown",
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "",
+        };
+
+        await pusherServer
+          .trigger(`private-${data.boxId}`, "new-message", pusherMessage)
+          .then(() => console.log("Message sent successfully: ", pusherMessage))
+          .catch((error) => console.error("Failed to send message:", error));
+
+        return { success: true, message: "Send successfully" };
+      }
+    } else {
+      // Nếu không tìm thấy MessageBox thì tạo mới
+      const message = await createContent(data, files, userId, [
+        userId,
+        data.boxId,
+      ]);
+      const populatedMessage = await Message.findById(message._id).populate({
+        path: "contentId",
+        model: "File",
+        select: "",
+        options: { strictPopulate: false },
+      });
+      detailBox = await MessageBox.create({
+        senderId: userId,
+        receiverIds: [data.boxId, userId],
+        messageIds: [message._id],
+        groupName: "",
+        groupAva: "",
+        flag: true,
+        pin: false,
+        createBy: userObjectId,
+        status: true,
+      });
+
+      // Populate thông tin người tạo tin nhắn (createBy)
+      const populatedSender = await populatedMessage.populate({
+        path: "createBy",
+        model: "User",
+        select: "firstName lastName avatar",
+      });
+
+      const pusherMessage: ResponseGroupMessageDTO = {
+        id: populatedMessage._id.toString(),
+        flag: true,
+        isReact: false,
+        readedId: populatedMessage.readedId.map((id: any) => id.toString()),
+        contentId:
+          populatedMessage.contentId[populatedMessage.contentId.length - 1],
+        text: populatedMessage.text[populatedMessage.text.length - 1],
+        boxId: data.boxId,
+        createAt: new Date().toISOString(),
+        createBy: populatedMessage.createBy._id,
+        createName: populatedSender.createBy
+          ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+          : "Unknown",
+        createAvatar: populatedSender.createBy
+          ? populatedSender.createBy.avatar
+          : "",
+      };
+
+      await pusherServer
+        .trigger(`private-${userId}`, "new-message", pusherMessage)
+        .then(() => console.log("Message sent successfully: ", pusherMessage))
+        .catch((error) => console.error("Failed to send message:", error));
+
+      return { success: true, message: "Create new box and send successfully" };
+    }
+  } catch (error) {
+    console.error("Error sending message: ", error);
+    throw error;
+  }
+}
+
+export async function createGroup(
+  membersIds: string[],
+  leaderId: string,
+  groupName: string,
+  groupAva: string
+) {
+  if (!Array.isArray(membersIds) || membersIds.length === 0) {
+    throw new Error("membersIds must be a non-empty array");
+  }
+  const leaderExist = await User.exists({ _id: leaderId });
+  if (!leaderExist) {
+    throw new Error("Leader ID does not exist");
+  }
+  const allMembersExist = await User.exists({ _id: { $in: membersIds } });
+  if (!allMembersExist) {
+    throw new Error("One or more member IDs do not exist");
+  }
+  const allReceiverIds = [leaderId, ...membersIds];
+  const existMessageBox = await MessageBox.findOne({
+    receiverIds: { $size: allReceiverIds.length, $all: allReceiverIds },
+  });
+
+  if (existMessageBox) {
+    return {
+      success: false,
+      message: "Box is existed.",
+      existMessageBox,
+    };
+  }
+
+  const userObjectId = new Types.ObjectId(leaderId);
+  const messageBox: MessageBoxDTO = await MessageBox.create({
+    senderId: leaderId,
+    receiverIds: [leaderId, ...membersIds],
+    messageIds: [],
+    groupName: groupName,
+    groupAva: groupAva,
+    flag: true,
+    pin: false,
+    createBy: userObjectId,
+  });
+  // return { success: true, messageBoxId: messageBox._id, messageBox };
+  return {
+    success: true,
+    message: "Create box chat successfully",
+    newBox: messageBox,
   };
 }
 
@@ -520,6 +734,7 @@ export async function deleteOrRevokeMessage(
     } else if (action == "delete") {
       message.visibility.set(userId, false);
       await message.save();
+      console.log(message, "delete message");
       const pusherMessage: PusherDelete = {
         id: message._id.toString(),
         flag: message.flag,
@@ -638,6 +853,85 @@ export async function fetchMessage(boxId: string, userId: string) {
   }
 }
 
+export async function fetchGroupMessage(boxId: string, userId: string) {
+  try {
+    await connectToDatabase();
+
+    // Tìm kiếm MessageBox và populate các messageIds
+    const messageBox = await MessageBox.findById(boxId)
+      .populate("messageIds")
+      .populate("receiverIds", "firstName lastName avatar");
+
+    if (!messageBox) {
+      throw new Error("MessageBox not found");
+    }
+
+    // Lọc các tin nhắn có visibility là true đối với userId
+    const messagesWithContent: ResponseGroupMessageDTO[] = await Promise.all(
+      messageBox.messageIds.map(async (messageId: any) => {
+        // Tìm tin nhắn với messageId và kiểm tra visibility của userId
+        const message = await Message.findOne({
+          _id: messageId,
+          [`visibility.${userId}`]: true, // Kiểm tra visibility của userId
+        });
+
+        if (!message) {
+          // Nếu không tìm thấy tin nhắn có visibility đúng, bỏ qua
+          return null;
+        }
+
+        // Populate nội dung của tin nhắn
+        const populatedMessage = await message.populate({
+          path: "contentId",
+          model: "File",
+          select: "",
+          options: { strictPopulate: false },
+        });
+
+        // Populate thông tin người tạo tin nhắn
+        const populatedSender = await message.populate({
+          path: "createBy",
+          model: "User",
+          select: "firstName lastName avatar", // Lấy thông tin firstName, lastName, avatar
+        });
+
+        // Tạo DTO cho tin nhắn với nội dung đã populate
+        const responseMessage: ResponseGroupMessageDTO = {
+          id: populatedMessage._id,
+          flag: populatedMessage.flag,
+          isReact: populatedMessage.isReact,
+          readedId: populatedMessage.readedId,
+          contentId: populatedMessage.flag
+            ? populatedMessage.contentId[populatedMessage.contentId.length - 1]
+            : undefined,
+          text: populatedMessage.flag
+            ? populatedMessage.text[populatedMessage.text.length - 1]
+            : "Message revoked", // Nếu tin nhắn bị thu hồi
+          boxId: populatedMessage.boxId.toString(),
+          createAt: populatedMessage.createAt,
+          createBy: populatedMessage.createBy._id,
+          createName: populatedSender.createBy
+            ? `${populatedSender.createBy.firstName} ${populatedSender.createBy.lastName}`
+            : "Unknown", // Tên đầy đủ của người tạo
+          createAvatar: populatedSender.createBy
+            ? populatedSender.createBy.avatar
+            : "", // Avatar của người tạo tin nhắn
+        };
+
+        return responseMessage;
+      })
+    );
+
+    // Lọc bỏ các tin nhắn không hợp lệ (null)
+    const validMessages = messagesWithContent.filter(Boolean);
+
+    return { success: true, messages: validMessages };
+  } catch (error) {
+    console.error("Error fetching messages: ", error);
+    throw error;
+  }
+}
+
 export async function checkMarkMessageAsRead(boxIds: string[], userId: string) {
   try {
     // Kết nối cơ sở dữ liệu
@@ -733,10 +1027,39 @@ export async function markMessageAsRead(boxId: string, userId: string) {
       return {
         success: true,
         messages: "Messages already read",
+        lastMessage,
       };
     }
   } catch (error) {
     console.error("Error marking message as read: ", error);
+    throw error;
+  }
+}
+
+export async function uploadGroupAvatar(
+  boxId: string,
+  url: string,
+  publicId: string
+) {
+  try {
+    connectToDatabase();
+    const group = await MessageBox.findById(boxId);
+    if (!group) {
+      throw new Error("BoxId not exist");
+    }
+
+    if (group.groupAvaPublicId) {
+      await cloudinary.uploader.destroy(group.groupAvaPublicId);
+      console.log("Previous avatar removed from Cloudinary");
+    }
+
+    group.groupAva = url;
+    group.groupAvaPublicId = publicId;
+    await group.save();
+
+    return { message: "Upload avatar successfully" };
+  } catch (error) {
+    console.log(error);
     throw error;
   }
 }
@@ -848,7 +1171,7 @@ export async function fetchBoxChat(userId: string) {
       $and: [{ receiverIds: { $in: [userId] } }, { receiverIds: { $size: 2 } }],
     }).populate(
       "receiverIds",
-      "firstName lastName nickName avatar phoneNumber"
+      "firstName lastName nickName avatar phoneNumber status"
     );
 
     if (!messageBoxes.length) {
@@ -858,7 +1181,7 @@ export async function fetchBoxChat(userId: string) {
       };
     }
 
-    // Process each message box and retrieve the last message
+    //Process each message box and retrieve the last message
     const messageBoxesWithDetails: MessageBoxDTO[] = await Promise.all(
       messageBoxes.map(async (messageBox) => {
         // Filter messages with visibility true for the userId
@@ -914,7 +1237,7 @@ export async function fetchBoxChat(userId: string) {
             : undefined,
           text: lastMessage.flag
             ? lastMessage.text[lastMessage.text.length - 1]
-            : "Message revoked",
+            : "Đã thu hồi",
           boxId: lastMessage.boxId.toString(),
           createAt: lastMessage.createAt,
           createBy: lastMessage.createBy,
@@ -960,7 +1283,7 @@ export async function fetchOneBoxChat(boxId: string, userId: string) {
       .populate("senderId", "firstName lastName nickName avatar phoneNumber")
       .populate(
         "receiverIds",
-        "firstName lastName nickName avatar phoneNumber"
+        "firstName lastName nickName avatar phoneNumber status"
       );
 
     if (!messageBox) {
@@ -1026,7 +1349,10 @@ export async function fetchBoxGroup(userId: string) {
         },
       ],
     })
-      .populate("receiverIds", "firstName lastName nickName avatar phoneNumber")
+      .populate(
+        "receiverIds",
+        "firstName lastName nickName avatar phoneNumber status"
+      )
       .populate("senderId", "firstName lastName nickName avatar phoneNumber");
 
     console.log(messageBoxes);
@@ -1104,6 +1430,8 @@ export async function fetchBoxGroup(userId: string) {
         };
       })
     );
+
+    console.log(messageBoxesWithContent, "messageBoxesWithContent");
 
     return { success: true, box: messageBoxesWithContent, adminId: userId };
   } catch (error) {
@@ -1255,6 +1583,88 @@ export async function removeChatBox(boxId: string) {
     return { success: true, message: "Message removed from database" };
   } catch (error) {
     console.error("Error remove messages from database: ", error);
+    throw error;
+  }
+}
+
+export async function isOnline(userId: string) {
+  try {
+    await connectToDatabase();
+
+    const statusResponse: StatusResponse = {
+      userId: userId,
+      status: true,
+      createAt: new Date(),
+    };
+
+    if (typeof userId !== "string") {
+      throw new Error("Invalid userId format");
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid ObjectId format");
+    }
+
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+    await User.updateOne(
+      { _id: new mongoose.Types.ObjectId(userId) },
+      { $set: { status: true } }
+    );
+
+    await pusherServer
+      .trigger(`private-${userId}`, "online-status", statusResponse)
+      .then(() => console.log("Update online successfully: ", statusResponse))
+      .catch((error) => console.error("Failed to update status:", error));
+    //return { success: true, populatedMessage, detailBox };
+    return {
+      success: true,
+      message: "Update online status successfully",
+      statusResponse,
+    };
+  } catch (error) {
+    console.error("Error update status from database: ", error);
+    throw error;
+  }
+}
+
+export async function isOffline(userId: string) {
+  try {
+    await connectToDatabase();
+
+    const statusResponse: StatusResponse = {
+      userId: userId,
+      status: false,
+      createAt: new Date(),
+    };
+
+    if (typeof userId !== "string") {
+      throw new Error("Invalid userId format");
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid ObjectId format");
+    }
+
+    const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+    await User.updateOne(
+      { _id: new mongoose.Types.ObjectId(userId) },
+      { $set: { status: false } }
+    );
+
+    await pusherServer
+      .trigger(`private-${userId}`, "offline-status", statusResponse)
+      .then(() => console.log("Update offline successfully: ", statusResponse))
+      .catch((error) => console.error("Failed to update status:", error));
+    //return { success: true, populatedMessage, detailBox };
+    return {
+      success: true,
+      message: "Update offline status successfully",
+      statusResponse,
+    };
+  } catch (error) {
+    console.error("Error update status from database: ", error);
     throw error;
   }
 }

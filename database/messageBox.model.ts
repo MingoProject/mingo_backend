@@ -8,6 +8,7 @@ export interface IMessageBox extends Document, IAudit {
   messageIds: Schema.Types.ObjectId[]; // Danh sách ID tin nhắn
   groupName?: string; // Tên nhóm (tuỳ chọn)
   groupAva?: string; // Ảnh đại diện nhóm (tuỳ chọn)
+  groupAvaPublicId: string;
   status: boolean; // Trạng thái của MessageBox (true/false)
 }
 
@@ -39,6 +40,7 @@ const MessageBoxSchema = new Schema<IMessageBox>({
     type: String,
     default: null,
   }, // Ảnh đại diện nhóm (mặc định là null)
+  groupAvaPublicId: { type: String, require: false },
   status: {
     type: Boolean,
     required: true,
