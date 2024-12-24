@@ -4,6 +4,7 @@ import { isUserExists } from "./user.action";
 import User from "@/database/user.model";
 import { connectToDatabase } from "../mongoose";
 import { ObjectId } from "mongodb";
+import { pusherServer } from "../pusher";
 
 export async function requestAddFriend(param: FriendRequestDTO) {
   try {
@@ -37,7 +38,10 @@ export async function requestAddFriend(param: FriendRequestDTO) {
       { $addToSet: { followerIds: param.sender } }
     );
 
-    console.log("ndUser", ndUser);
+    pusherServer.trigger(`user-${param.receiver}`, "friend_request", {
+      sender: param.sender,
+      message: `You have a new friend request from ${param.sender}`,
+    });
     return { message: `Request friend to ${param.receiver} successfully!` };
   } catch (error) {
     console.log(error);

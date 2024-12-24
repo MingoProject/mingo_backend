@@ -2,6 +2,7 @@ import Notification from "@/database/notification.model";
 import mongoose, { Types } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import { CreateNotificationDTO } from "@/dtos/NotificationDTO";
+import { pusherServer } from "../pusher";
 
 export async function createNotification(params: CreateNotificationDTO) {
   try {
@@ -17,8 +18,16 @@ export async function createNotification(params: CreateNotificationDTO) {
       mediaId: params.mediaId || null,
       isRead: false,
       createBy: params.senderId,
+      createAt: new Date(),
     });
 
+    await pusherServer.trigger(
+      `notifications-${params.receiverId}`,
+      "new-notification",
+      {
+        notification,
+      }
+    );
     return notification;
   } catch (error) {
     console.error("Error creating notification: ", error);
@@ -47,6 +56,13 @@ export const deleteNotification = async (notificationId: string) => {
     if (!notification) {
       throw new Error("Notification not found");
     }
+    await pusherServer.trigger(
+      `notifications-${notification.receiverId}`,
+      "notification-deleted",
+      {
+        notificationId,
+      }
+    );
 
     return { message: "Notification deleted successfully" };
   } catch (error) {
