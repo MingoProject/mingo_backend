@@ -637,7 +637,7 @@ export async function getPostById(
       .populate("author", "_id firstName lastName avatar")
       .populate("media")
       // .populate("comments")
-      .populate("likes")
+      // .populate("likes")
       .populate("shares")
       .populate("tags");
 

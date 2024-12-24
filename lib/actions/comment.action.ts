@@ -73,7 +73,7 @@ export async function createReplyCommentPost(
       parentId: params.parentId || null,
       originalCommentId: params.originalCommentId || null,
       likes: [],
-      createdAt: new Date(),
+      createAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
@@ -108,7 +108,7 @@ export async function createReplyCommentMedia(
       parentId: params.parentId || null,
       originalCommentId: params.originalCommentId || null,
       likes: [],
-      createdAt: new Date(),
+      createAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
@@ -196,7 +196,7 @@ export async function deleteCommentReplyMedia(
     const repliesIds = repliesToDelete.map((reply) => reply._id);
     await Comment.deleteMany({ parentId: commentId });
     await Comment.findByIdAndDelete(commentId);
-    await Post.findByIdAndUpdate(
+    await Media.findByIdAndUpdate(
       mediaId,
       {
         $pull: { comments: { $in: [commentId, ...repliesIds] } },
@@ -213,7 +213,7 @@ export async function deleteCommentReplyMedia(
 
     return {
       status: true,
-      message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+      message: `Comment with ID ${commentId} and its replies have been deleted from media, and removed from original comment replies.`,
     };
   } catch (error: any) {
     console.error(error);
@@ -223,54 +223,6 @@ export async function deleteCommentReplyMedia(
     };
   }
 }
-// try {
-//   // Tìm comment theo ID để lấy danh sách replies
-//   const comment = await Comment.findById(commentId).lean();
-//   if (!comment) {
-//     return { success: false, message: 'Comment không tồn tại.' };
-//   }
-
-//   // Xóa comment gốc và các replies của nó
-//   const replyIds = comment.replies || []; // Lấy danh sách replies từ trường `replies`
-//   await Comment.deleteMany({ _id: { $in: [commentId, ...replyIds] } });
-
-//   return { success: true, message: 'Comment và các replies trực tiếp đã được xóa.' };
-// } catch (error) {
-//   console.error('Lỗi khi xóa comment và các replies trực tiếp:', error);
-//   return { success: false, message: 'Xóa comment thất bại.' };
-// }
-
-// export async function deleteComment(commentId: string, postId: string) {
-//   try {
-//     connectToDatabase();
-
-//     // Xóa comment khỏi Comment model
-//     const deleteComment = await Comment.findByIdAndDelete(commentId);
-//     if (!deleteComment) {
-//       return {
-//         status: false,
-//         message: `Comment with ID ${commentId} does not exist.`,
-//       };
-//     }
-
-//     // Cập nhật Post để xóa comment khỏi danh sách comments
-//     await Post.findByIdAndUpdate(
-//       postId,
-//       {
-//         $pull: { comments: commentId }, // Xóa commentId khỏi array comments
-//       },
-//       { new: true }
-//     );
-
-//     return {
-//       status: true,
-//       message: `Comment with ID ${commentId} has been deleted from post.`,
-//     };
-//   } catch (error) {
-//     console.error(error);
-//     throw error;
-//   }
-// }
 
 export async function deleteComment(commentId: string, postId: string) {
   try {
@@ -331,7 +283,7 @@ export async function deleteCommentMedia(commentId: string, mediaId: string) {
     const idsToDelete = [commentId, ...replies];
     await Comment.deleteMany({ _id: { $in: idsToDelete } });
 
-    await Post.findByIdAndUpdate(
+    await Media.findByIdAndUpdate(
       mediaId,
       {
         $pull: { comments: { $in: idsToDelete } },
@@ -581,7 +533,7 @@ export async function createCommentMedia(
       content: params.content,
       replies: params.replies || [],
       likes: [],
-      createdAt: new Date(),
+      createAt: new Date(),
       createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
       parentId: null,
