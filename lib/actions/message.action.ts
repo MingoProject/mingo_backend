@@ -717,7 +717,7 @@ export async function deleteOrRevokeMessage(
         id: message._id.toString(),
         flag: message.flag,
         isReact: message.isReact,
-        text: "Message revoked",
+        text: "font-mregular",
         boxId: message.boxId.toString(),
         action: "revoke",
         createAt: new Date().toISOString(),
@@ -833,7 +833,7 @@ export async function fetchMessage(boxId: string, userId: string) {
             : undefined,
           text: populatedMessage.flag
             ? populatedMessage.text[populatedMessage.text.length - 1]
-            : "Message revoked", // Nếu tin nhắn bị thu hồi
+            : "Message unsent", // Nếu tin nhắn bị thu hồi
           boxId: populatedMessage.boxId.toString(),
           createAt: populatedMessage.createAt,
           createBy: populatedMessage.createBy,
@@ -906,7 +906,7 @@ export async function fetchGroupMessage(boxId: string, userId: string) {
             : undefined,
           text: populatedMessage.flag
             ? populatedMessage.text[populatedMessage.text.length - 1]
-            : "Message revoked", // Nếu tin nhắn bị thu hồi
+            : "unsent message", // Nếu tin nhắn bị thu hồi
           boxId: populatedMessage.boxId.toString(),
           createAt: populatedMessage.createAt,
           createBy: populatedMessage.createBy._id,
@@ -1237,7 +1237,7 @@ export async function fetchBoxChat(userId: string) {
             : undefined,
           text: lastMessage.flag
             ? lastMessage.text[lastMessage.text.length - 1]
-            : "Đã thu hồi",
+            : "Message unsent",
           boxId: lastMessage.boxId.toString(),
           createAt: lastMessage.createAt,
           createBy: lastMessage.createBy,
@@ -1417,7 +1417,7 @@ export async function fetchBoxGroup(userId: string) {
             : undefined,
           text: populatedMessage.flag
             ? populatedMessage.text[populatedMessage.text.length - 1]
-            : "Message revoked",
+            : "unsent message",
           boxId: populatedMessage.boxId.toString(),
           createAt: populatedMessage.createAt,
           createBy: populatedMessage.createBy, // Lấy ID của createBy
@@ -1648,10 +1648,12 @@ export async function isOffline(userId: string) {
 
     const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
-    await User.updateOne(
-      { _id: new mongoose.Types.ObjectId(userId) },
-      { $set: { status: false } }
-    );
+    if (user) {
+      await User.updateOne(
+        { _id: new mongoose.Types.ObjectId(userId) },
+        { $set: { status: false } }
+      );
+    }
 
     await pusherServer
       .trigger(`private-${userId}`, "offline-status", statusResponse)
