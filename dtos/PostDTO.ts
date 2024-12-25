@@ -1,5 +1,5 @@
 import { Schema } from "mongoose";
-import { UserInfor } from "@/dtos/ReportDTO";
+import { UserInfor } from "@/dtos/reportDTO";
 
 export interface PostCreateDTO {
   content: string;
