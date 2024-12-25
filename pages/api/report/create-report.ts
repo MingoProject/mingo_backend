@@ -1,6 +1,6 @@
 // pages/api/report/create.ts
 import { createReport } from "@/lib/actions/report.action"; // Import logic tạo báo cáo
-import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/ReportDTO"; // DTO cho báo cáo
+import { ReportCreateDTO, ReportResponseDTO } from "@/dtos/reportDTO"; // DTO cho báo cáo
 import type { NextApiRequest, NextApiResponse } from "next";
 import corsMiddleware, {
   authenticateToken,
