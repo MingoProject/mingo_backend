@@ -7,7 +7,7 @@ import {
   CommentReportCreateDTO,
   ReportCreateDTO,
   ReportResponseDTO,
-} from "@/dtos/ReportDTO";
+} from "@/dtos/reportDTO";
 
 export async function createReport(
   params: ReportCreateDTO,
