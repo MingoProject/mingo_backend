@@ -1065,6 +1065,9 @@ export async function getMyLikedPosts(id: String | undefined) {
 export const findUserByPhoneNumber = async (phoneNumber: string) => {
   try {
     const user = await User.findOne({ phoneNumber });
+    if (!user) {
+      return null;
+    }
     const result: UserResponseDTO = {
       _id: user._id.toString(),
       firstName: user.firstName,
