@@ -4,7 +4,7 @@ import {
   CommentReportCreateDTO,
   ReportCreateDTO,
   ReportResponseDTO,
-} from "@/dtos/ReportDTO"; // DTO cho báo cáo
+} from "@/dtos/reportDTO"; // DTO cho báo cáo
 import type { NextApiRequest, NextApiResponse } from "next";
 import corsMiddleware, {
   authenticateToken,

@@ -170,6 +170,7 @@ export async function getAllReports(): Promise<ReportResponseDTO[]> {
       proofs: report.proofs || [],
       parentReportEntityId: report.parentReportEntityId || "",
     }));
+  
     return reportDTOs;
   } catch (error) {
     console.error("Error fetching reports:", error);
