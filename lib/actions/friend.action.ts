@@ -5,6 +5,7 @@ import User from "@/database/user.model";
 import { connectToDatabase } from "../mongoose";
 import { ObjectId } from "mongodb";
 import { pusherServer } from "../pusher";
+import { Schema } from "mongoose";
 
 export async function requestAddFriend(param: FriendRequestDTO) {
   try {
@@ -435,5 +436,62 @@ export async function unBlock(param: FriendRequestDTO) {
   } catch (error) {
     console.log(error);
     throw error;
+  }
+}
+
+export async function suggestFriends(
+  userId: Schema.Types.ObjectId | undefined
+) {
+  try {
+    await connectToDatabase();
+    if (!userId) throw new Error("Missing userId");
+
+    // Lấy danh sách friendIds và bestFriendIds của user
+    const user: any = await User.findById(userId)
+      .select("friendIds bestFriendIds")
+      .lean();
+    if (!user) throw new Error("User not found");
+
+    const friendIds = user.friendIds || [];
+    const bestFriendIds = user.bestFriendIds || [];
+    const allRelations = [...friendIds, ...bestFriendIds]; // Gộp cả bạn bè và bạn thân
+
+    // Tìm bạn bè của bạn bè (cả friendIds và bestFriendIds)
+    const friendsOfFriends = await User.find(
+      { _id: { $in: allRelations } },
+      "friendIds bestFriendIds"
+    ).lean();
+
+    let fofIds: Schema.Types.ObjectId[] = [];
+    friendsOfFriends.forEach((friend) => {
+      fofIds = [...fofIds, ...friend.friendIds, ...friend.bestFriendIds];
+    });
+
+    // Loại bỏ chính user và những người đã là bạn bè/bạn thân
+    const uniqueFoF = fofIds
+      .filter(
+        (id) =>
+          !allRelations.includes(id) && id.toString() !== userId.toString()
+      )
+      .reduce((acc, id) => {
+        acc.set(id.toString(), (acc.get(id.toString()) || 0) + 1);
+        return acc;
+      }, new Map());
+
+    // Sắp xếp theo số lượng bạn chung giảm dần
+    const sortedFoF = [...uniqueFoF.entries()]
+      .sort((a, b) => b[1] - a[1]) // Sắp xếp theo số bạn chung giảm dần
+      .map(([id]) => id);
+
+    // Lấy thông tin chi tiết của những người được gợi ý
+    const suggestedFriends = await User.find(
+      { _id: { $in: sortedFoF } },
+      "firstName lastName avatar friendIds bestFriendIds"
+    ).lean();
+
+    return suggestedFriends;
+  } catch (error) {
+    console.error("Error suggesting friends:", error);
+    throw new Error("Internal server error");
   }
 }

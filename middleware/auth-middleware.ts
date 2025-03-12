@@ -19,6 +19,11 @@ export function authenticateToken(
   const authHeader = isOpenApi
     ? req.headers["auth"]
     : req.headers["authorization"];
+
+  if (!authHeader || Array.isArray(authHeader)) {
+    return res.status(401).json({ message: "Invalid authorization header" });
+  }
+
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token)
