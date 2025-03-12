@@ -1,4 +1,6 @@
-import { generateOpenApi } from "@ts-rest/open-api";
+// import { generateOpenApi } from "@ts-rest/open-api";
+
+// import { generateOpenApi } from "@ts-rest/open-api";
 // import { Contract } from "./contract/Contract";
 // export const OpenAPIV1 = generateOpenApi(Contract, {
 //   info: {

@@ -17,7 +17,8 @@ export default async function handler(
       if (req.method === "POST") {
         try {
           if (req.user && req.user.id) {
-            const { userId } = req.query;
+            // Lấy id của người dùng đang đăng nhập từ req.user
+            const userId = req.user.id;
 
             if (!userId || typeof userId !== "string") {
               return res.status(400).json({ message: "Invalid userId" });
