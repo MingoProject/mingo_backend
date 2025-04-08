@@ -2,10 +2,11 @@
   "name": "mingo_backend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
     "build": "next build",
-    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "@types/mongoose": "^5.11.96",
     "@types/node": "^20",
     "@types/react": "18.3.12",
+    "nodemon": "^3.1.9",
     "@types/react-dom": "^18",
     "@types/streamifier": "^0.1.2",
     "postcss": "^8",
