@@ -5,6 +5,7 @@ export interface MediaCreateDTO {
   type: string;
   caption?: string;
 }
+
 export interface MediaResponseDTO {
   _id: string;
   url: string;

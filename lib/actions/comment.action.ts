@@ -32,14 +32,13 @@ export async function createComment(
     connectToDatabase();
 
     const newComment = await Comment.create({
-      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      author: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
       replies: params.replies || [],
       parentId: null,
       originalCommentId: null,
       likes: [],
       createdAt: new Date(),
-      createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
 
@@ -67,14 +66,13 @@ export async function createReplyCommentPost(
     connectToDatabase();
 
     const newComment = await Comment.create({
-      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      author: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
       replies: params.replies || [],
       parentId: params.parentId || null,
       originalCommentId: params.originalCommentId || null,
       likes: [],
       createAt: new Date(),
-      createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
 
@@ -102,14 +100,13 @@ export async function createReplyCommentMedia(
     connectToDatabase();
 
     const newComment = await Comment.create({
-      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      author: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
       replies: params.replies || [],
       parentId: params.parentId || null,
       originalCommentId: params.originalCommentId || null,
       likes: [],
       createAt: new Date(),
-      createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
     });
 
@@ -356,66 +353,6 @@ export async function addReplyToComment(commentId: string, replyId: string) {
   }
 }
 
-export async function getAuthorByCommentId(
-  commentId: string
-): Promise<UserResponseDTO> {
-  try {
-    await connectToDatabase();
-    const comment = await Comment.findById(commentId).populate({
-      path: "userId",
-      model: User,
-    });
-    if (!comment) {
-      throw new Error("comment not found");
-    }
-
-    if (!comment.userId) {
-      throw new Error("Author not found");
-    }
-
-    const author = comment.userId;
-
-    const authorDTO: UserResponseDTO = {
-      _id: author._id.toString(),
-      firstName: author.firstName,
-      lastName: author.lastName,
-      nickName: author.nickName,
-      phoneNumber: author.phoneNumber,
-      email: author.email,
-      role: author.roles,
-      avatar: author.avatar,
-      background: author.background,
-      gender: author.gender,
-      address: author.address,
-      job: author.job,
-      hobbies: author.hobbies,
-      bio: author.bio,
-      point: 0,
-      relationShip: author.relationShip,
-      birthDay: author.birthDay,
-      attendDate: author.attendDate,
-      flag: author.flag,
-      countReport: author.countReport,
-      friendIds: author.friendIds,
-      followingIds: author.followingIds,
-      followerIds: author.followerIds,
-      bestFriendIds: author.bestFriendIds,
-      blockedIds: author.blockedIds,
-      postIds: author.postIds,
-      createAt: author.createdAt,
-      createBy: author.createBy,
-      status: author.status,
-      saveIds: author.saveIds,
-      likeIds: author.likeIds,
-    };
-
-    return authorDTO;
-  } catch (error: any) {
-    console.error("Error fetching author: ", error);
-    throw new Error("Error fetching author: " + error.message);
-  }
-}
-
 export async function likeComment(
   commentId: String | undefined,
   userId: Schema.Types.ObjectId | undefined
@@ -529,12 +466,11 @@ export async function createCommentMedia(
     connectToDatabase();
 
     const newComment = await Comment.create({
-      userId: createBy ? createBy : new mongoose.Types.ObjectId(),
+      author: createBy ? createBy : new mongoose.Types.ObjectId(),
       content: params.content,
       replies: params.replies || [],
       likes: [],
       createAt: new Date(),
-      createdTime: new Date(),
       createBy: createBy ? createBy : new mongoose.Types.ObjectId(),
       parentId: null,
       originalCommentId: null,
@@ -555,70 +491,6 @@ export async function createCommentMedia(
   }
 }
 
-// export async function deleteCommentMedia(commentId: string, mediaId: string) {
-//   try {
-//     connectToDatabase();
-
-//     const deleteComment = await Comment.findByIdAndDelete(commentId);
-//     if (!deleteComment) {
-//       return {
-//         status: false,
-//         message: `Comment with ID ${commentId} does not exist.`,
-//       };
-//     }
-
-//     await Media.findByIdAndUpdate(
-//       mediaId,
-//       {
-//         $pull: { comments: commentId },
-//       },
-//       { new: true }
-//     );
-
-//     return {
-//       status: true,
-//       message: `Comment with ID ${commentId} has been deleted from media.`,
-//     };
-//   } catch (error) {
-//     console.error(error);
-//     throw error;
-//   }
-// }
-
-export const getRepliesByCommentId = async (
-  commentId: string
-): Promise<CommentResponseDTO[]> => {
-  try {
-    await connectToDatabase();
-
-    const comment = await Comment.findById(commentId).populate({
-      path: "replies",
-      model: Comment,
-    });
-
-    if (!comment) {
-      throw new Error("Post not found");
-    }
-
-    const users: CommentResponseDTO[] = comment.replies.map((comment: any) => {
-      return {
-        _id: comment._id,
-        userId: comment.userId,
-        content: comment.content,
-        replies: comment.replies,
-        likes: comment.likes,
-        createdAt: comment.createAt,
-        createBy: comment.createBy,
-      };
-    });
-
-    return users;
-  } catch (error: any) {
-    console.error("Error fetching comment:", error.message);
-    throw new Error("Error fetching comment: " + error.message);
-  }
-};
-
 export async function getCommentById(
   commentId: string
 ): Promise<CommentResponseDTO | null> {
@@ -626,21 +498,51 @@ export async function getCommentById(
     await connectToDatabase();
 
     const comment = await Comment.findById(commentId)
-      .populate("userId", "firstName lastName avatar")
-      .populate("replies")
-      .populate("likes");
-    // .populate("content")
-    // .populate("createAt")
-    // .populate("createBy");
-    if (comment?.parentId) {
-      await comment.populate("parentId");
-    }
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "parentId",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "originalCommentId",
+        select: "_id",
+      });
 
     if (!comment) {
       throw new Error("comment not found");
     }
 
-    return comment;
+    const result: CommentResponseDTO = {
+      _id: String(comment._id),
+      author: {
+        _id: comment.author._id.toString(),
+        firstName: comment.author.firstName,
+        lastName: comment.author.lastName,
+        avatar: comment.author.avatar,
+      },
+      content: comment.content,
+      replies:
+        comment.replies?.map((id: mongoose.Types.ObjectId) => id.toString()) ||
+        [],
+      likes:
+        comment.likes?.map((id: mongoose.Types.ObjectId) => id.toString()) ||
+        [],
+      createAt: comment.createAt,
+      parentId: comment.parentId
+        ? {
+            _id: comment.parentId._id.toString(),
+            firstName: comment.parentId.firstName || "",
+            lastName: comment.parentId.lastName || "",
+            avatar: comment.parentId.avatar,
+          }
+        : null,
+      originalCommentId: comment.originalCommentId?._id?.toString() || null,
+    };
+
+    return result;
   } catch (error) {
     console.error("Error fetching comment by ID:", error);
     throw error;
