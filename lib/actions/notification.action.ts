@@ -1,7 +1,10 @@
 import Notification from "@/database/notification.model";
 import mongoose, { Types } from "mongoose";
 import { connectToDatabase } from "../mongoose";
-import { CreateNotificationDTO } from "@/dtos/NotificationDTO";
+import {
+  CreateNotificationDTO,
+  NotificationResponseDTO,
+} from "@/dtos/NotificationDTO";
 import { pusherServer } from "../pusher";
 import User from "@/database/user.model";
 
@@ -51,7 +54,7 @@ export async function createNotification(params: CreateNotificationDTO) {
 
 export const getNotifications = async (
   userId: mongoose.Schema.Types.ObjectId | undefined
-) => {
+): Promise<NotificationResponseDTO[]> => {
   return await Notification.find({ receiverId: userId })
     .populate("senderId", "avatar firstName lastName")
     .sort({ createdAt: -1 });
@@ -89,7 +92,7 @@ export const getNotification = async (
   senderId: string,
   receiverId: string,
   type: string
-) => {
+): Promise<NotificationResponseDTO> => {
   try {
     const notification = await Notification.findOne({
       senderId,

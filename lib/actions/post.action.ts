@@ -14,12 +14,74 @@ import Comment from "@/database/comment.model";
 import User from "@/database/user.model";
 import { MediaResponseDTO } from "@/dtos/MediaDTO";
 import Media from "@/database/media.model";
-import { console } from "inspector";
+import { differenceInHours } from "date-fns";
 
-export async function getAllPosts() {
+// export async function getAllPosts() {
+//   try {
+//     connectToDatabase();
+//     const result: PostResponseDTO[] = await Post.find();
+
+//     return result;
+//   } catch (error) {
+//     console.log(error);
+//     throw error;
+//   }
+// }
+
+export async function getAllPosts(): Promise<PostResponseDTO[]> {
   try {
-    connectToDatabase();
-    const result: PostResponseDTO[] = await Post.find();
+    await connectToDatabase();
+
+    const posts = await Post.find()
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
+
+    const result: PostResponseDTO[] = posts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
 
     return result;
   } catch (error) {
@@ -294,18 +356,6 @@ export const getAuthorByPostId = async (
       birthDay: author.birthDay,
       attendDate: author.attendDate,
       flag: author.flag,
-      countReport: author.countReport,
-      friendIds: author.friendIds,
-      followingIds: author.followingIds,
-      followerIds: author.followerIds,
-      bestFriendIds: author.bestFriendIds,
-      blockedIds: author.blockedIds,
-      postIds: author.postIds,
-      createAt: author.createdAt,
-      createBy: author.createBy,
-      status: author.status,
-      saveIds: author.saveIds,
-      likeIds: author.likeIds,
     };
 
     return authorDTO; // Trả về thông tin tác giả
@@ -787,5 +837,87 @@ export const fetchPostsWithQuery = async (query: string) => {
   } catch (error) {
     console.error("Error fetching posts:", error);
     throw new Error("Failed to fetch posts");
+  }
+};
+
+export const getTrendingPosts = async (): Promise<PostResponseDTO[]> => {
+  try {
+    await connectToDatabase();
+
+    const posts = await Post.find({ flag: true })
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
+
+    const scoredPosts = posts.map((post: any) => {
+      const now = new Date();
+      const hoursSinceCreated = Math.max(
+        differenceInHours(now, post.createdAt),
+        1
+      );
+
+      const score =
+        Math.log10((post.likes?.length || 0) + 1) +
+        Math.log10((post.comments?.length || 0) + 1) * 1.2 +
+        Math.log10((post.shares?.length || 0) + 1) * 1.5 -
+        hoursSinceCreated * 0.1;
+
+      return { ...post, trendScore: score };
+    });
+
+    scoredPosts.sort((a, b) => b.trendScore - a.trendScore);
+
+    const topPosts = scoredPosts.slice(0, 10);
+
+    const result: PostResponseDTO[] = topPosts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching trending posts:", error);
+    throw new Error("Failed to fetch trending posts");
   }
 };

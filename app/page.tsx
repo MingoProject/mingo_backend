@@ -1,4 +1,6 @@
+import { test } from "@/lib/test";
 import Image from "next/image";
+import { useEffect } from "react";
 
 export default function Home() {
   return (

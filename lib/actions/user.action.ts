@@ -7,6 +7,8 @@ import {
   UserRegisterDTO,
   UserResponseDTO,
   UpdateUserBioDTO,
+  UserBasicInfo,
+  SearchUserResponseDTO,
 } from "@/dtos/UserDTO";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
@@ -15,45 +17,57 @@ import mongoose, { Schema, Types } from "mongoose";
 import Post from "@/database/post.model";
 import cloudinary from "@/cloudinary";
 import Media from "@/database/media.model";
+import { FriendResponseDTO } from "@/dtos/FriendDTO";
+import { getMutualFriends } from "./friend.action";
+import { MediaResponseDTO } from "@/dtos/MediaDTO";
 const saltRounds = 10;
 
-export async function getAllUsers(): Promise<UserResponseDTO[]> {
+export async function getAllUsers(
+  userId: string | undefined
+): Promise<SearchUserResponseDTO[]> {
   try {
     connectToDatabase();
-    const users = await User.find().select("-password"); // Loại bỏ password
-    const result: UserResponseDTO[] = users.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const users = await User.find().select("_id firstName lastName avatar");
+
+    const result: SearchUserResponseDTO[] = await Promise.all(
+      users.map(async (friend: any) => {
+        // Nếu không có userId, trả về không tính mutualFriends
+        if (!userId) {
+          return {
+            _id: friend._id.toString(),
+            firstName: friend.firstName,
+            lastName: friend.lastName,
+            avatar: friend.avatar,
+            mutualFriends: [],
+          };
+        }
+
+        // Nếu là chính mình thì không cần gọi getMutualFriends
+        if (friend._id.toString() === userId) {
+          return {
+            _id: friend._id.toString(),
+            firstName: friend.firstName,
+            lastName: friend.lastName,
+            avatar: friend.avatar,
+            mutualFriends: [],
+          };
+        }
+
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
@@ -143,18 +157,18 @@ export async function createUser(
       birthDay: newUser.birthDay,
       attendDate: newUser.attendDate,
       flag: newUser.flag,
-      countReport: newUser.countReport,
-      friendIds: newUser.friendIds,
-      followingIds: newUser.followingIds,
-      followerIds: newUser.followerIds,
-      bestFriendIds: newUser.bestFriendIds,
-      blockedIds: newUser.blockedIds,
-      postIds: newUser.postIds,
-      createAt: newUser.createAt,
-      createBy: newUser.createBy,
-      status: newUser.status,
-      saveIds: newUser.saveIds,
-      likeIds: newUser.likeIds,
+      // countReport: newUser.countReport,
+      // friendIds: newUser.friendIds,
+      // followingIds: newUser.followingIds,
+      // followerIds: newUser.followerIds,
+      // bestFriendIds: newUser.bestFriendIds,
+      // blockedIds: newUser.blockedIds,
+      // postIds: newUser.postIds,
+      // createAt: newUser.createAt,
+      // createBy: newUser.createBy,
+      // status: newUser.status,
+      // saveIds: newUser.saveIds,
+      // likeIds: newUser.likeIds,
     };
 
     return result;
@@ -235,18 +249,18 @@ export async function createAdmin(
       birthDay: newUser.birthDay,
       attendDate: newUser.attendDate,
       flag: newUser.flag,
-      countReport: newUser.countReport,
-      friendIds: newUser.friendIds,
-      followingIds: newUser.followingIds,
-      followerIds: newUser.followerIds,
-      bestFriendIds: newUser.bestFriendIds,
-      blockedIds: newUser.blockedIds,
-      postIds: newUser.postIds,
-      createAt: newUser.createAt,
-      createBy: newUser.createBy,
-      status: newUser.status,
-      saveIds: newUser.saveIds,
-      likeIds: newUser.likeIds,
+      // countReport: newUser.countReport,
+      // friendIds: newUser.friendIds,
+      // followingIds: newUser.followingIds,
+      // followerIds: newUser.followerIds,
+      // bestFriendIds: newUser.bestFriendIds,
+      // blockedIds: newUser.blockedIds,
+      // postIds: newUser.postIds,
+      // createAt: newUser.createAt,
+      // createBy: newUser.createBy,
+      // status: newUser.status,
+      // saveIds: newUser.saveIds,
+      // likeIds: newUser.likeIds,
     };
 
     return result;
@@ -367,18 +381,18 @@ export async function updateUser(
       birthDay: updatedUser.birthDay,
       attendDate: updatedUser.attendDate,
       flag: updatedUser.flag,
-      countReport: updatedUser.countReport,
-      friendIds: updatedUser.friendIds,
-      followingIds: updatedUser.followingIds,
-      followerIds: updatedUser.followerIds,
-      bestFriendIds: updatedUser.bestFriendIds,
-      blockedIds: updatedUser.blockedIds,
-      postIds: updatedUser.postIds,
-      createAt: updatedUser.createAt,
-      createBy: updatedUser.createBy,
-      status: updatedUser.status,
-      saveIds: updatedUser.saveIds,
-      likeIds: updatedUser.likeIds,
+      // countReport: updatedUser.countReport,
+      // friendIds: updatedUser.friendIds,
+      // followingIds: updatedUser.followingIds,
+      // followerIds: updatedUser.followerIds,
+      // bestFriendIds: updatedUser.bestFriendIds,
+      // blockedIds: updatedUser.blockedIds,
+      // postIds: updatedUser.postIds,
+      // createAt: updatedUser.createAt,
+      // createBy: updatedUser.createBy,
+      // status: updatedUser.status,
+      // saveIds: updatedUser.saveIds,
+      // likeIds: updatedUser.likeIds,
     };
 
     return { status: true, newProfile: result };
@@ -425,18 +439,18 @@ export async function updateUserBio(
       birthDay: updatedUser.birthDay,
       attendDate: updatedUser.attendDate,
       flag: updatedUser.flag,
-      countReport: updatedUser.countReport,
-      friendIds: updatedUser.friendIds,
-      followingIds: updatedUser.followingIds,
-      followerIds: updatedUser.followerIds,
-      bestFriendIds: updatedUser.bestFriendIds,
-      blockedIds: updatedUser.blockedIds,
-      postIds: updatedUser.postIds,
-      createAt: updatedUser.createAt,
-      createBy: updatedUser.createBy,
-      status: updatedUser.status,
-      saveIds: updatedUser.saveIds,
-      likeIds: updatedUser.likeIds,
+      // countReport: updatedUser.countReport,
+      // friendIds: updatedUser.friendIds,
+      // followingIds: updatedUser.followingIds,
+      // followerIds: updatedUser.followerIds,
+      // bestFriendIds: updatedUser.bestFriendIds,
+      // blockedIds: updatedUser.blockedIds,
+      // postIds: updatedUser.postIds,
+      // createAt: updatedUser.createAt,
+      // createBy: updatedUser.createBy,
+      // status: updatedUser.status,
+      // saveIds: updatedUser.saveIds,
+      // likeIds: updatedUser.likeIds,
     };
 
     return { status: true, newProfile: result };
@@ -492,18 +506,18 @@ export async function getMyProfile(id: String | undefined) {
       birthDay: myProfile.birthDay,
       attendDate: myProfile.attendDate,
       flag: myProfile.flag,
-      countReport: myProfile.countReport,
-      friendIds: myProfile.friendIds,
-      followingIds: myProfile.followingIds,
-      followerIds: myProfile.followerIds,
-      bestFriendIds: myProfile.bestFriendIds,
-      blockedIds: myProfile.blockedIds,
-      postIds: myProfile.postIds,
-      createAt: myProfile.createAt,
-      createBy: myProfile.createBy,
-      status: myProfile.status,
-      saveIds: myProfile.saveIds,
-      likeIds: myProfile.likeIds,
+      // countReport: myProfile.countReport,
+      // friendIds: myProfile.friendIds,
+      // followingIds: myProfile.followingIds,
+      // followerIds: myProfile.followerIds,
+      // bestFriendIds: myProfile.bestFriendIds,
+      // blockedIds: myProfile.blockedIds,
+      // postIds: myProfile.postIds,
+      // createAt: myProfile.createAt,
+      // createBy: myProfile.createBy,
+      // status: myProfile.status,
+      // saveIds: myProfile.saveIds,
+      // likeIds: myProfile.likeIds,
     };
 
     return result;
@@ -535,111 +549,86 @@ export async function getMyPosts(id: String | undefined) {
   }
 }
 
-export async function getMyFriends(id: String | undefined) {
+export async function getMyFriends(
+  userId: string | undefined
+): Promise<FriendResponseDTO[]> {
   try {
-    connectToDatabase();
+    await connectToDatabase();
 
-    // Tìm user và chỉ lấy friendIds
-    const user = await User.findById(id).select("friendIds");
-
+    const user = await User.findById(userId).select("friendIds");
     if (!user || !Array.isArray(user.friendIds)) {
-      console.log(`Cannot get ${id} friends now`);
-      throw new Error(`Cannot get ${id} friends now`);
+      console.log(`Cannot get ${userId} friends now`);
+      throw new Error(`Cannot get ${userId} friends now`);
     }
 
-    // Truy vấn danh sách bạn bè dựa trên friendIds
-    const friends = await User.find({
-      _id: { $in: user.friendIds }, // Lấy danh sách bạn bè theo ObjectId
-    });
+    const friends = await User.find(
+      { _id: { $in: user.friendIds } },
+      "_id firstName lastName avatar"
+    ).lean();
 
-    const result: UserResponseDTO[] = friends.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const result: FriendResponseDTO[] = await Promise.all(
+      friends.map(async (friend: any) => {
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
-    console.error(error);
+    console.error("Error in getMyFriends:", error);
     throw error;
   }
 }
 
-export async function getMyBffs(id: String | undefined) {
+export async function getMyBffs(
+  userId: string | undefined
+): Promise<FriendResponseDTO[]> {
   try {
     connectToDatabase();
 
-    const user = await User.findById(id).select("bestFriendIds");
+    const user = await User.findById(userId).select("bestFriendIds");
 
     if (!user || !Array.isArray(user.bestFriendIds)) {
-      console.log(`Cannot get ${id} bestFriends now`);
-      throw new Error(`Cannot get ${id} bestFriends now`);
+      console.log(`Cannot get ${userId} bestFriends now`);
+      throw new Error(`Cannot get ${userId} bestFriends now`);
     }
-    const bestFriends: UserResponseDTO[] = await User.find({
-      _id: { $in: user.bestFriendIds },
-    });
+    const bestFriends: UserBasicInfo[] = await User.find(
+      {
+        _id: { $in: user.bestFriendIds },
+      },
+      "_id firstName lastName avatar"
+    );
 
-    const result: UserResponseDTO[] = bestFriends.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const result: FriendResponseDTO[] = await Promise.all(
+      bestFriends.map(async (friend: any) => {
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
@@ -648,56 +637,42 @@ export async function getMyBffs(id: String | undefined) {
   }
 }
 
-export async function getMyFollowings(id: String | undefined) {
+export async function getMyFollowings(userId: string | undefined) {
   try {
     connectToDatabase();
 
-    // Tìm user và chỉ lấy friendIds
-    const user = await User.findById(id).select("followingIds");
+    const user = await User.findById(userId).select("followingIds");
 
     if (!user || !Array.isArray(user.followingIds)) {
-      console.log(`Cannot get ${id} followings now`);
-      throw new Error(`Cannot get ${id} followings now`);
+      console.log(`Cannot get ${userId} followings now`);
+      throw new Error(`Cannot get ${userId} followings now`);
     }
 
-    // Truy vấn danh sách bạn bè dựa trên friendIds
-    const followings: UserResponseDTO[] = await User.find({
-      _id: { $in: user.followingIds }, // Lấy danh sách bạn bè theo ObjectId
-    });
+    const followings: UserBasicInfo[] = await User.find(
+      {
+        _id: { $in: user.followingIds },
+      },
+      "_id firstName lastName avatar"
+    );
 
-    const result: UserResponseDTO[] = followings.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const result: FriendResponseDTO[] = await Promise.all(
+      followings.map(async (friend: any) => {
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
@@ -706,56 +681,42 @@ export async function getMyFollowings(id: String | undefined) {
   }
 }
 
-export async function getMyFollowers(id: String | undefined) {
+export async function getMyFollowers(userId: string | undefined) {
   try {
     connectToDatabase();
 
-    // Tìm user và chỉ lấy friendIds
-    const user = await User.findById(id).select("followerIds");
+    const user = await User.findById(userId).select("followerIds");
 
     if (!user || !Array.isArray(user.followerIds)) {
-      console.log(`Cannot get ${id} follower now`);
-      throw new Error(`Cannot get ${id} follower now`);
+      console.log(`Cannot get ${userId} follower now`);
+      throw new Error(`Cannot get ${userId} follower now`);
     }
 
-    // Truy vấn danh sách bạn bè dựa trên friendIds
-    const followers: UserResponseDTO[] = await User.find({
-      _id: { $in: user.followerIds }, // Lấy danh sách bạn bè theo ObjectId
-    });
+    const followers: UserBasicInfo[] = await User.find(
+      {
+        _id: { $in: user.followerIds },
+      },
+      "_id firstName lastName avatar"
+    );
 
-    const result: UserResponseDTO[] = followers.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const result: FriendResponseDTO[] = await Promise.all(
+      followers.map(async (friend: any) => {
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
@@ -764,54 +725,42 @@ export async function getMyFollowers(id: String | undefined) {
   }
 }
 
-export async function getMyBlocks(id: String | undefined) {
+export async function getMyBlocks(userId: string | undefined) {
   try {
     connectToDatabase();
 
-    const user = await User.findById(id).select("blockedIds");
+    const user = await User.findById(userId).select("blockedIds");
 
     if (!user || !Array.isArray(user.blockedIds)) {
-      console.log(`Cannot get ${id} blockeds now`);
-      throw new Error(`Cannot get ${id} blockeds now`);
+      console.log(`Cannot get ${userId} blockeds now`);
+      throw new Error(`Cannot get ${userId} blockeds now`);
     }
 
-    const blockeds: UserResponseDTO[] = await User.find({
-      _id: { $in: user.blockedIds },
-    });
+    const blockeds: UserBasicInfo[] = await User.find(
+      {
+        _id: { $in: user.blockedIds },
+      },
+      "_id firstName lastName avatar"
+    );
 
-    const result: UserResponseDTO[] = blockeds.map((user) => ({
-      _id: user._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      nickName: user.nickName,
-      phoneNumber: user.phoneNumber,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      background: user.background,
-      gender: user.gender,
-      address: user.address,
-      job: user.job,
-      hobbies: user.hobbies,
-      bio: user.bio,
-      point: user.point,
-      relationShip: user.relationShip,
-      birthDay: user.birthDay,
-      attendDate: user.attendDate,
-      flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
-    }));
+    const result: FriendResponseDTO[] = await Promise.all(
+      blockeds.map(async (friend: any) => {
+        const mutualFriends = await getMutualFriends(userId, friend._id);
+
+        return {
+          _id: friend._id.toString(),
+          firstName: friend.firstName,
+          lastName: friend.lastName,
+          avatar: friend.avatar,
+          mutualFriends: mutualFriends.map((m: any) => ({
+            _id: m._id.toString(),
+            firstName: m.firstName,
+            lastName: m.lastName,
+            avatar: m.avatar,
+          })),
+        };
+      })
+    );
 
     return result;
   } catch (error) {
@@ -897,22 +846,36 @@ export async function uploadBackground(
   }
 }
 
-export async function getMyImages(id: String | undefined) {
+export async function getMyImages(
+  id: string | undefined
+): Promise<MediaResponseDTO[]> {
   try {
     if (!id) {
       throw new Error("User ID is required");
     }
 
-    connectToDatabase();
+    await connectToDatabase();
 
     const images = await Media.find({
       type: "image",
       createBy: id,
-    }).select("url _id");
+    })
+      .select("_id url type caption createAt likes comments shares createBy")
+      .lean();
 
-    return images;
+    return images.map((image: any) => ({
+      _id: image._id.toString(),
+      url: image.url,
+      type: image.type,
+      caption: image.caption,
+      createAt: image.createAt,
+      likes: image.likes || [],
+      comments: image.comments || [],
+      shares: image.shares || [],
+      createBy: image.createBy?.toString(),
+    }));
   } catch (error) {
-    console.error(error);
+    console.error("getMyImages error:", error);
     throw error;
   }
 }
@@ -1088,18 +1051,18 @@ export const findUserByPhoneNumber = async (phoneNumber: string) => {
       birthDay: user.birthDay,
       attendDate: user.attendDate,
       flag: user.flag,
-      countReport: user.countReport,
-      friendIds: user.friendIds,
-      followingIds: user.followingIds,
-      followerIds: user.followerIds,
-      bestFriendIds: user.bestFriendIds,
-      blockedIds: user.blockedIds,
-      postIds: user.postIds,
-      createAt: user.createAt,
-      createBy: user.createBy,
-      status: user.status,
-      saveIds: user.saveIds,
-      likeIds: user.likeIds,
+      // countReport: user.countReport,
+      // friendIds: user.friendIds,
+      // followingIds: user.followingIds,
+      // followerIds: user.followerIds,
+      // bestFriendIds: user.bestFriendIds,
+      // blockedIds: user.blockedIds,
+      // postIds: user.postIds,
+      // createAt: user.createAt,
+      // createBy: user.createBy,
+      // status: user.status,
+      // saveIds: user.saveIds,
+      // likeIds: user.likeIds,
     };
 
     return result;

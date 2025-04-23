@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 import { UserInfor } from "@/dtos/reportDTO";
+import { UserBasicInfo } from "./UserDTO";
 
 export interface PostCreateDTO {
   content: string;
@@ -13,24 +14,50 @@ export interface PostCreateDTO {
   };
 }
 
+// export interface PostResponseDTO {
+//   _id: string;
+//   content: string;
+//   media?: Schema.Types.ObjectId[];
+//   url?: string;
+//   createdAt: Date;
+//   author: Schema.Types.ObjectId;
+//   shares: Schema.Types.ObjectId[];
+//   likes: Schema.Types.ObjectId[];
+//   savedByUsers: Schema.Types.ObjectId[];
+//   comments: Schema.Types.ObjectId[];
+//   location?: string;
+//   tags?: Schema.Types.ObjectId[];
+//   privacy: {
+//     type: string;
+//     allowedUsers?: Schema.Types.ObjectId[];
+//   };
+//   likedIds: Schema.Types.ObjectId[];
+//   flag: boolean;
+// }
+
+export interface MediaInfo {
+  _id: string;
+  url: string;
+  type: string;
+}
+
 export interface PostResponseDTO {
   _id: string;
   content: string;
-  media?: Schema.Types.ObjectId[];
-  url?: string;
+  media?: MediaInfo[];
   createdAt: Date;
-  author: Schema.Types.ObjectId;
-  shares: Schema.Types.ObjectId[];
-  likes: Schema.Types.ObjectId[];
-  savedByUsers: Schema.Types.ObjectId[];
-  comments: Schema.Types.ObjectId[];
+  author: UserBasicInfo;
+  shares: string[];
+  likes: string[];
+  savedByUsers: string[];
+  comments: string[];
   location?: string;
-  tags?: Schema.Types.ObjectId[];
+  tags?: UserBasicInfo[];
   privacy: {
     type: string;
-    allowedUsers?: Schema.Types.ObjectId[];
+    allowedUsers?: string[];
   };
-  likedIds: Schema.Types.ObjectId[];
+  likedIds: string[];
   flag: boolean;
 }
 

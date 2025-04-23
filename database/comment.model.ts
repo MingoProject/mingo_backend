@@ -2,10 +2,8 @@ import mongoose, { Schema, model, Document, models } from "mongoose";
 import { IAudit, AuditSchema } from "./audit.model";
 
 export interface IComment extends Document, IAudit {
-  // id: string;
-  userId: mongoose.Schema.Types.ObjectId;
+  author: mongoose.Schema.Types.ObjectId;
   content: string;
-  createdAt: Date;
   replies?: mongoose.Types.ObjectId[];
   likes?: mongoose.Schema.Types.ObjectId[];
   parentId?: mongoose.Schema.Types.ObjectId;
@@ -13,10 +11,8 @@ export interface IComment extends Document, IAudit {
 }
 
 const CommentSchema = new Schema<IComment>({
-  // id: { type: String, required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   content: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
   replies: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
   parentId: {
     type: mongoose.Schema.Types.ObjectId,

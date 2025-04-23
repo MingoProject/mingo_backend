@@ -6,6 +6,7 @@ import { connectToDatabase } from "../mongoose";
 import { ObjectId } from "mongodb";
 import { pusherServer } from "../pusher";
 import { Schema } from "mongoose";
+import { UserBasicInfo } from "@/dtos/UserDTO";
 
 export async function requestAddFriend(param: FriendRequestDTO) {
   try {
@@ -439,6 +440,45 @@ export async function unBlock(param: FriendRequestDTO) {
   }
 }
 
+export async function getMutualFriends(
+  userId1: string | undefined,
+  userId2: string | undefined
+) {
+  try {
+    await connectToDatabase();
+
+    const users = await User.find({ _id: { $in: [userId1, userId2] } })
+      .select("_id friendIds bestFriendIds")
+      .lean();
+
+    if (users.length < 2) throw new Error("One or both users not found");
+
+    const [user1, user2] = users;
+
+    const relations1 = new Set([
+      ...(user1.friendIds || []).map((id: any) => id.toString()),
+      ...(user1.bestFriendIds || []).map((id: any) => id.toString()),
+    ]);
+
+    const relations2 = new Set([
+      ...(user2.friendIds || []).map((id: any) => id.toString()),
+      ...(user2.bestFriendIds || []).map((id: any) => id.toString()),
+    ]);
+
+    const mutualIds = [...relations1].filter((id) => relations2.has(id));
+
+    const mutualFriends = await User.find(
+      { _id: { $in: mutualIds } },
+      "_id firstName lastName avatar"
+    ).lean();
+
+    return mutualFriends;
+  } catch (error) {
+    console.error("Error getting mutual friends:", error);
+    throw new Error("Internal server error");
+  }
+}
+
 export async function suggestFriends(
   userId: Schema.Types.ObjectId | undefined
 ) {
@@ -446,7 +486,6 @@ export async function suggestFriends(
     await connectToDatabase();
     if (!userId) throw new Error("Missing userId");
 
-    // Lấy danh sách friendIds và bestFriendIds của user
     const user: any = await User.findById(userId)
       .select("friendIds bestFriendIds")
       .lean();
@@ -454,9 +493,8 @@ export async function suggestFriends(
 
     const friendIds = user.friendIds || [];
     const bestFriendIds = user.bestFriendIds || [];
-    const allRelations = [...friendIds, ...bestFriendIds]; // Gộp cả bạn bè và bạn thân
+    const allRelations = [...friendIds, ...bestFriendIds];
 
-    // Tìm bạn bè của bạn bè (cả friendIds và bestFriendIds)
     const friendsOfFriends = await User.find(
       { _id: { $in: allRelations } },
       "friendIds bestFriendIds"
@@ -467,29 +505,62 @@ export async function suggestFriends(
       fofIds = [...fofIds, ...friend.friendIds, ...friend.bestFriendIds];
     });
 
-    // Loại bỏ chính user và những người đã là bạn bè/bạn thân
-    const uniqueFoF = fofIds
-      .filter(
-        (id) =>
-          !allRelations.includes(id) && id.toString() !== userId.toString()
-      )
-      .reduce((acc, id) => {
-        acc.set(id.toString(), (acc.get(id.toString()) || 0) + 1);
-        return acc;
-      }, new Map());
+    const mutualMap = new Map<string, Set<string>>();
 
-    // Sắp xếp theo số lượng bạn chung giảm dần
-    const sortedFoF = [...uniqueFoF.entries()]
-      .sort((a, b) => b[1] - a[1]) // Sắp xếp theo số bạn chung giảm dần
-      .map(([id]) => id);
+    fofIds.forEach((fofId) => {
+      const idStr = fofId.toString();
+      if (!allRelations.includes(fofId) && idStr !== userId.toString()) {
+        if (!mutualMap.has(idStr)) mutualMap.set(idStr, new Set());
+        mutualMap.get(idStr)?.add(fofId.toString()); // thêm chính mình (tạm)
+      }
+    });
 
-    // Lấy thông tin chi tiết của những người được gợi ý
+    const suggestedIds = [...mutualMap.keys()];
+
     const suggestedFriends = await User.find(
-      { _id: { $in: sortedFoF } },
-      "firstName lastName avatar friendIds bestFriendIds"
+      { _id: { $in: suggestedIds } },
+      "_id firstName lastName avatar friendIds bestFriendIds"
     ).lean();
 
-    return suggestedFriends;
+    const allFriends = await User.find(
+      { _id: { $in: allRelations } },
+      "_id firstName lastName avatar"
+    ).lean();
+
+    const friendMap = new Map<string, any>();
+    allFriends.forEach((f: any) => {
+      friendMap.set(f._id.toString(), {
+        _id: f._id,
+        firstName: f.firstName,
+        lastName: f.lastName,
+        avatar: f.avatar,
+      });
+    });
+
+    const result = suggestedFriends.map((friend) => {
+      const allFriendsOfFriend = [
+        ...(friend.friendIds || []),
+        ...(friend.bestFriendIds || []),
+      ].map((id: any) => id.toString());
+
+      const mutuals = allFriendsOfFriend.filter((fid) =>
+        allRelations.map((id) => id.toString()).includes(fid)
+      );
+
+      const mutualFriends = mutuals
+        .map((id) => friendMap.get(id))
+        .filter(Boolean);
+
+      return {
+        _id: friend._id,
+        firstName: friend.firstName,
+        lastName: friend.lastName,
+        avatar: friend.avatar,
+        mutualFriends,
+      };
+    });
+
+    return result;
   } catch (error) {
     console.error("Error suggesting friends:", error);
     throw new Error("Internal server error");
