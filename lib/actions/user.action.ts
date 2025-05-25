@@ -9,6 +9,7 @@ import {
   UpdateUserBioDTO,
   UserBasicInfo,
   SearchUserResponseDTO,
+  MyProfileResponseDTO,
 } from "@/dtos/UserDTO";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";
@@ -20,6 +21,7 @@ import Media from "@/database/media.model";
 import { FriendResponseDTO } from "@/dtos/FriendDTO";
 import { getMutualFriends } from "./friend.action";
 import { MediaResponseDTO } from "@/dtos/MediaDTO";
+import { PostResponseDTO } from "@/dtos/PostDTO";
 const saltRounds = 10;
 
 export async function getAllUsers(
@@ -157,18 +159,6 @@ export async function createUser(
       birthDay: newUser.birthDay,
       attendDate: newUser.attendDate,
       flag: newUser.flag,
-      // countReport: newUser.countReport,
-      // friendIds: newUser.friendIds,
-      // followingIds: newUser.followingIds,
-      // followerIds: newUser.followerIds,
-      // bestFriendIds: newUser.bestFriendIds,
-      // blockedIds: newUser.blockedIds,
-      // postIds: newUser.postIds,
-      // createAt: newUser.createAt,
-      // createBy: newUser.createBy,
-      // status: newUser.status,
-      // saveIds: newUser.saveIds,
-      // likeIds: newUser.likeIds,
     };
 
     return result;
@@ -249,18 +239,6 @@ export async function createAdmin(
       birthDay: newUser.birthDay,
       attendDate: newUser.attendDate,
       flag: newUser.flag,
-      // countReport: newUser.countReport,
-      // friendIds: newUser.friendIds,
-      // followingIds: newUser.followingIds,
-      // followerIds: newUser.followerIds,
-      // bestFriendIds: newUser.bestFriendIds,
-      // blockedIds: newUser.blockedIds,
-      // postIds: newUser.postIds,
-      // createAt: newUser.createAt,
-      // createBy: newUser.createBy,
-      // status: newUser.status,
-      // saveIds: newUser.saveIds,
-      // likeIds: newUser.likeIds,
     };
 
     return result;
@@ -303,40 +281,7 @@ export async function findUser(
       avatar: user.avatar,
       relation: "",
     };
-    // const relations = await Relation.find({
-    //   stUser: userId,
-    //   ndUSer: result._id,
-    // });
-    // if (relations.length === 0) {
-    //   result.relation = "stranger";
-    // } else {
-    //   for (const relation of relations) {
-    //     if (!relation.status) {
-    //       if (relation.relation === "bff") {
-    //         if (relation.sender.toString() === user._id.toString()) {
-    //           result.relation = "sent_bff";
-    //           break;
-    //         } else {
-    //           result.relation = "received_bff";
-    //           break;
-    //         }
-    //       } else {
-    //         if (relation.sender.toString() === user._id.toString()) {
-    //           result.relation = "sent_friend";
-    //         } else {
-    //           result.relation = "received_friend";
-    //         }
-    //       }
-    //     } else {
-    //       if (relation.relation === "bff") {
-    //         result.relation = "bff";
-    //         break;
-    //       } else {
-    //         result.relation = " friend";
-    //       }
-    //     }
-    //   }
-    // }
+
     return result;
   } catch (error) {
     console.log(error);
@@ -381,18 +326,6 @@ export async function updateUser(
       birthDay: updatedUser.birthDay,
       attendDate: updatedUser.attendDate,
       flag: updatedUser.flag,
-      // countReport: updatedUser.countReport,
-      // friendIds: updatedUser.friendIds,
-      // followingIds: updatedUser.followingIds,
-      // followerIds: updatedUser.followerIds,
-      // bestFriendIds: updatedUser.bestFriendIds,
-      // blockedIds: updatedUser.blockedIds,
-      // postIds: updatedUser.postIds,
-      // createAt: updatedUser.createAt,
-      // createBy: updatedUser.createBy,
-      // status: updatedUser.status,
-      // saveIds: updatedUser.saveIds,
-      // likeIds: updatedUser.likeIds,
     };
 
     return { status: true, newProfile: result };
@@ -486,7 +419,7 @@ export async function getMyProfile(id: String | undefined) {
       console.log(`Cannot get ${id} profile now`);
       throw new Error(`Cannot get ${id} profile now`);
     }
-    const result: UserResponseDTO = {
+    const result: MyProfileResponseDTO = {
       _id: myProfile._id.toString(),
       firstName: myProfile.firstName,
       lastName: myProfile.lastName,
@@ -507,11 +440,11 @@ export async function getMyProfile(id: String | undefined) {
       attendDate: myProfile.attendDate,
       flag: myProfile.flag,
       // countReport: myProfile.countReport,
-      // friendIds: myProfile.friendIds,
-      // followingIds: myProfile.followingIds,
-      // followerIds: myProfile.followerIds,
-      // bestFriendIds: myProfile.bestFriendIds,
-      // blockedIds: myProfile.blockedIds,
+      friendIds: myProfile.friendIds,
+      followingIds: myProfile.followingIds,
+      followerIds: myProfile.followerIds,
+      bestFriendIds: myProfile.bestFriendIds,
+      blockedIds: myProfile.blockedIds,
       // postIds: myProfile.postIds,
       // createAt: myProfile.createAt,
       // createBy: myProfile.createBy,
@@ -527,24 +460,67 @@ export async function getMyProfile(id: String | undefined) {
   }
 }
 
-export async function getMyPosts(id: String | undefined) {
+export async function getMyPosts(id: string | undefined) {
   try {
-    connectToDatabase();
-    const user = await User.findById(id)
+    if (!id) throw new Error("User ID is required");
+
+    await connectToDatabase();
+
+    const posts = await Post.find({ author: id })
       .populate({
-        path: "postIds",
-        model: Post,
+        path: "author",
+        select: "_id firstName lastName avatar",
       })
-      .select("postIds");
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
 
-    if (!user) {
-      console.log(`Cannot get ${id} posts now`);
-      throw new Error(`Cannot get ${id} posts now`);
-    }
+    const result: PostResponseDTO[] = posts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media:
+        post.media?.map((m: any) => ({
+          _id: String(m._id),
+          url: m.url,
+          type: m.type,
+        })) || [],
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
 
-    return user.postIds; // Return only the postIds array
+    return result;
   } catch (error) {
-    console.log(error);
+    console.error("Error in getMyPosts:", error);
     throw error;
   }
 }
@@ -992,10 +968,57 @@ export async function getMySavedPosts(id: String | undefined) {
     const savedPosts = await Post.find({
       _id: { $in: user.saveIds },
     })
-      .populate("author", "firstName lastName _id avatar") // Populate các trường firstName, lastName và _id của author
-      .exec();
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
 
-    return savedPosts;
+    const result: PostResponseDTO[] = savedPosts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;
@@ -1015,10 +1038,57 @@ export async function getMyLikedPosts(id: String | undefined) {
     const likedPosts = await Post.find({
       _id: { $in: user.likeIds },
     })
-      .populate("author", "firstName lastName _id avatar") // Populate các trường firstName, lastName và _id của author
-      .exec();
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
 
-    return likedPosts;
+    const result: PostResponseDTO[] = likedPosts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;

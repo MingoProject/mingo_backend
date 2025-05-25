@@ -36,6 +36,40 @@ export interface SearchUserResponseDTO {
   mutualFriends: MutualFriendDTO[];
 }
 
+export interface MyProfileResponseDTO {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  nickName: string;
+  phoneNumber: string;
+  email: string;
+  role: string[];
+  avatar: string;
+  background: string;
+  gender: boolean;
+  address: string;
+  job: string;
+  hobbies: string[];
+  bio: string;
+  point: number;
+  relationShip: string;
+  birthDay: string;
+  attendDate: string;
+  flag: boolean;
+  // countReport: number;
+  friendIds: Schema.Types.ObjectId[];
+  followingIds: Schema.Types.ObjectId[];
+  followerIds: Schema.Types.ObjectId[];
+  bestFriendIds: Schema.Types.ObjectId[];
+  blockedIds: Schema.Types.ObjectId[];
+  // postIds: Schema.Types.ObjectId[];
+  // createAt: Date;
+  // createBy: Schema.Types.ObjectId;
+  // status: Boolean;
+  // saveIds: Schema.Types.ObjectId[];
+  // likeIds: Schema.Types.ObjectId[];
+}
+
 export interface UserResponseDTO {
   _id: string;
   firstName: string;
