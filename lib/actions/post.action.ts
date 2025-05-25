@@ -90,6 +90,86 @@ export async function getAllPosts(): Promise<PostResponseDTO[]> {
   }
 }
 
+export async function getRelevantPosts(
+  userId: string
+): Promise<PostResponseDTO[]> {
+  try {
+    await connectToDatabase();
+
+    const currentUser = await User.findById(userId);
+
+    if (!currentUser) throw new Error("User not found");
+
+    const relatedUserIds = new Set<string>();
+
+    relatedUserIds.add(userId); // chính mình
+
+    currentUser.friends?.forEach((id: any) => relatedUserIds.add(String(id)));
+    currentUser.bestFriends?.forEach((id: any) =>
+      relatedUserIds.add(String(id))
+    );
+    currentUser.following?.forEach((id: any) => relatedUserIds.add(String(id)));
+
+    const posts = await Post.find({
+      author: { $in: Array.from(relatedUserIds) },
+    })
+      .populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      })
+      .populate({
+        path: "media",
+        select: "_id url type",
+      })
+      .populate({
+        path: "tags",
+        select: "_id firstName lastName avatar",
+      })
+      .lean();
+
+    const result: PostResponseDTO[] = posts.map((post: any) => ({
+      _id: String(post._id),
+      content: post.content,
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: new Date(post.createdAt),
+      author: {
+        _id: String(post.author._id),
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        avatar: post.author.avatar,
+      },
+      shares: post.shares?.map((id: any) => String(id)) || [],
+      likes: post.likes?.map((id: any) => String(id)) || [],
+      savedByUsers: post.savedByUsers?.map((id: any) => String(id)) || [],
+      comments: post.comments?.map((id: any) => String(id)) || [],
+      location: post.location,
+      tags:
+        post.tags?.map((tag: any) => ({
+          _id: String(tag._id),
+          firstName: tag.firstName,
+          lastName: tag.lastName,
+          avatar: tag.avatar,
+        })) || [],
+      privacy: {
+        type: post.privacy?.type,
+        allowedUsers:
+          post.privacy?.allowedUsers?.map((id: any) => String(id)) || [],
+      },
+      likedIds: post.likedIds?.map((id: any) => String(id)) || [],
+      flag: post.flag,
+    }));
+
+    return result;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
 export async function createPost(
   params: PostCreateDTO,
   createBy: Schema.Types.ObjectId | undefined
@@ -143,7 +223,43 @@ export async function createPost(
         select: "_id url type", // Ví dụ: lấy id và url của media
       });
 
-    return populatedPost;
+    const result: PostResponseDTO = {
+      _id: String(populatedPost._id),
+      content: populatedPost.content || "",
+      media: (populatedPost.media || []).map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+      })),
+      createdAt: populatedPost.createdAt,
+      author: {
+        _id: String(populatedPost.author._id),
+        firstName: populatedPost.author.firstName,
+        lastName: populatedPost.author.lastName,
+        avatar: populatedPost.author.avatar,
+      },
+      shares: [],
+      likes: [],
+      likedIds: [],
+      savedByUsers: [],
+      comments: [],
+      tags: (populatedPost.tags || []).map((t: any) => ({
+        _id: String(t._id),
+        firstName: t.firstName,
+        lastName: t.lastName,
+        avatar: t.avatar,
+      })),
+      location: populatedPost.location || "",
+      flag: populatedPost.flag,
+      privacy: {
+        type: populatedPost.privacy.type || "public",
+        allowedUsers:
+          populatedPost.privacy.allowedUsers?.map((id: any) => String(id)) ||
+          [],
+      },
+    };
+
+    return result;
   } catch (error) {
     console.error(error);
     throw error;

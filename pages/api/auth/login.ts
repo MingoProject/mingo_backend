@@ -23,7 +23,9 @@ export default async function hanlder(
     });
 
     if (!existedUser) {
-      throw new Error("Invalid phone number or password!");
+      return res
+        .status(401)
+        .json({ message: "Invalid phone number or password!" });
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -34,7 +36,9 @@ export default async function hanlder(
     console.log(isPasswordValid, "isPasswordValid");
 
     if (!isPasswordValid) {
-      throw new Error("Invalid phone number or password!");
+      return res
+        .status(401)
+        .json({ message: "Invalid phone number or password!" });
     }
 
     const roles = existedUser.roles;

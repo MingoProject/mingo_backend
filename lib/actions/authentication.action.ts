@@ -14,6 +14,7 @@ const formatPhoneNumber = (phoneNumber: string): string => {
 };
 
 export const sendSMS = async (phoneNumber: string) => {
+  console.log(phoneNumber);
   const otpCode = Math.floor(100000 + Math.random() * 900000);
   const API_KEY =
     "9b711f8223b2abb560e2bee66b08e9b5-1fc5ccf0-7349-4d96-a97f-b14f3ae45de6";
