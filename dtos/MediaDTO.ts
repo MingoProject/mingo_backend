@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import { UserBasicInfo } from "./UserDTO";
 
 export interface MediaCreateDTO {
   url: string;
@@ -12,8 +12,8 @@ export interface MediaResponseDTO {
   type: string;
   caption?: string;
   createAt: Date;
-  likes: Schema.Types.ObjectId[];
-  comments: Schema.Types.ObjectId[];
-  shares: Schema.Types.ObjectId[];
-  createBy?: Schema.Types.ObjectId;
+  likes: string[];
+  comments: string[];
+  shares: string[];
+  createBy?: UserBasicInfo;
 }

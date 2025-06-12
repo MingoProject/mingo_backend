@@ -125,6 +125,54 @@ export async function createReplyCommentMedia(
   }
 }
 
+// export async function deleteCommentReply(
+//   commentId: string,
+//   originalCommentId: string,
+//   postId: string
+// ) {
+//   try {
+//     await connectToDatabase();
+
+//     // Tìm comment cần xóa (commentId)
+//     const commentToDelete = await Comment.findById(commentId);
+//     if (!commentToDelete) {
+//       return {
+//         status: false,
+//         message: `Comment with ID ${commentId} does not exist.`,
+//       };
+//     }
+//     const repliesToDelete = await Comment.find({ parentId: commentId });
+//     const repliesIds = repliesToDelete.map((reply) => reply._id);
+//     await Comment.deleteMany({ parentId: commentId });
+//     await Comment.findByIdAndDelete(commentId);
+//     await Post.findByIdAndUpdate(
+//       postId,
+//       {
+//         $pull: { comments: { $in: [commentId, ...repliesIds] } },
+//       },
+//       { new: true }
+//     );
+//     await Comment.findByIdAndUpdate(
+//       originalCommentId,
+//       {
+//         $pull: { replies: { $in: [commentId, ...repliesIds] } },
+//       },
+//       { new: true }
+//     );
+
+//     return {
+//       status: true,
+//       message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+//     };
+//   } catch (error: any) {
+//     console.error(error);
+//     return {
+//       status: false,
+//       message: `An error occurred: ${error.message}`,
+//     };
+//   }
+// }
+
 export async function deleteCommentReply(
   commentId: string,
   originalCommentId: string,
@@ -133,7 +181,7 @@ export async function deleteCommentReply(
   try {
     await connectToDatabase();
 
-    // Tìm comment cần xóa (commentId)
+    // Kiểm tra comment tồn tại
     const commentToDelete = await Comment.findById(commentId);
     if (!commentToDelete) {
       return {
@@ -141,28 +189,31 @@ export async function deleteCommentReply(
         message: `Comment with ID ${commentId} does not exist.`,
       };
     }
-    const repliesToDelete = await Comment.find({ parentId: commentId });
-    const repliesIds = repliesToDelete.map((reply) => reply._id);
-    await Comment.deleteMany({ parentId: commentId });
+
+    // Xóa comment chính
     await Comment.findByIdAndDelete(commentId);
+
+    // Xóa comment khỏi post
     await Post.findByIdAndUpdate(
       postId,
       {
-        $pull: { comments: { $in: [commentId, ...repliesIds] } },
+        $pull: { comments: commentId },
       },
       { new: true }
     );
+
+    // Xóa comment khỏi replies của comment gốc
     await Comment.findByIdAndUpdate(
       originalCommentId,
       {
-        $pull: { replies: { $in: [commentId, ...repliesIds] } },
+        $pull: { replies: commentId },
       },
       { new: true }
     );
 
     return {
       status: true,
-      message: `Comment with ID ${commentId} and its replies have been deleted from post, and removed from original comment replies.`,
+      message: `Comment with ID ${commentId} has been deleted and removed from post & original comment replies.`,
     };
   } catch (error: any) {
     console.error(error);
@@ -181,7 +232,7 @@ export async function deleteCommentReplyMedia(
   try {
     await connectToDatabase();
 
-    // Tìm comment cần xóa (commentId)
+    // Kiểm tra comment tồn tại
     const commentToDelete = await Comment.findById(commentId);
     if (!commentToDelete) {
       return {
@@ -189,28 +240,31 @@ export async function deleteCommentReplyMedia(
         message: `Comment with ID ${commentId} does not exist.`,
       };
     }
-    const repliesToDelete = await Comment.find({ parentId: commentId });
-    const repliesIds = repliesToDelete.map((reply) => reply._id);
-    await Comment.deleteMany({ parentId: commentId });
+
+    // Xóa comment chính
     await Comment.findByIdAndDelete(commentId);
+
+    // Gỡ comment khỏi media
     await Media.findByIdAndUpdate(
       mediaId,
       {
-        $pull: { comments: { $in: [commentId, ...repliesIds] } },
+        $pull: { comments: commentId },
       },
       { new: true }
     );
+
+    // Gỡ comment khỏi replies của comment gốc
     await Comment.findByIdAndUpdate(
       originalCommentId,
       {
-        $pull: { replies: { $in: [commentId, ...repliesIds] } },
+        $pull: { replies: commentId },
       },
       { new: true }
     );
 
     return {
       status: true,
-      message: `Comment with ID ${commentId} and its replies have been deleted from media, and removed from original comment replies.`,
+      message: `Comment with ID ${commentId} has been deleted and removed from media & original comment replies.`,
     };
   } catch (error: any) {
     console.error(error);
@@ -404,59 +458,6 @@ export async function dislikeComment(
   }
 }
 
-export const getLikesByCommentId = async (
-  commentId: string
-): Promise<UserResponseDTO[]> => {
-  try {
-    await connectToDatabase();
-
-    const comment = await Comment.findById(commentId).populate({
-      path: "likes",
-      model: User,
-    });
-
-    if (!comment) {
-      throw new Error("Post not found");
-    }
-
-    const users: UserResponseDTO[] = comment.likes.map((user: any) => {
-      return {
-        _id: user._id.toString(),
-        firstName: user.firstName,
-        lastName: user.lastName,
-        nickName: user.nickName,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-        role: user.roles,
-        avatar: user.avatar,
-        background: user.background,
-        gender: user.gender,
-        address: user.address,
-        job: user.job,
-        hobbies: user.hobbies,
-        bio: user.bio,
-        point: 0,
-        relationShip: user.relationShip,
-        birthDay: user.birthDay,
-        attendDate: user.attendDate,
-        flag: user.flag,
-        friendIds: user.friendIds,
-        followingIds: user.followingIds,
-        bestFriendIds: user.bestFriendIds,
-        blockedIds: user.blockedIds,
-        postIds: user.postIds,
-        createAt: user.createdAt,
-        createBy: user.createBy,
-      };
-    });
-
-    return users;
-  } catch (error: any) {
-    console.error("Error fetching media:", error.message);
-    throw new Error("Error fetching media: " + error.message);
-  }
-};
-
 export async function createCommentMedia(
   params: CreateCommentDTO,
   createBy: Schema.Types.ObjectId | undefined,
@@ -504,7 +505,10 @@ export async function getCommentById(
       })
       .populate({
         path: "parentId",
-        select: "_id firstName lastName avatar",
+        populate: {
+          path: "author",
+          select: "_id firstName lastName avatar",
+        },
       })
       .populate({
         path: "originalCommentId",
@@ -513,6 +517,31 @@ export async function getCommentById(
 
     if (!comment) {
       throw new Error("comment not found");
+    }
+
+    let parentAuthor = null;
+    if (comment.parentId) {
+      const parentComment = await Comment.findById(comment.parentId).populate({
+        path: "author",
+        select: "_id firstName lastName avatar",
+      });
+
+      if (parentComment?.author) {
+        parentAuthor = {
+          _id: parentComment._id.toString(),
+          firstName: parentComment.author.firstName || "",
+          lastName: parentComment.author.lastName || "",
+          avatar: parentComment.author.avatar || "",
+        };
+      } else {
+        // Parent comment đã bị xóa hoặc không có author
+        parentAuthor = {
+          _id: comment.parentId.toString(),
+          firstName: "",
+          lastName: "",
+          avatar: "",
+        };
+      }
     }
 
     const result: CommentResponseDTO = {
@@ -531,14 +560,7 @@ export async function getCommentById(
         comment.likes?.map((id: mongoose.Types.ObjectId) => id.toString()) ||
         [],
       createAt: comment.createAt,
-      parentId: comment.parentId
-        ? {
-            _id: comment.parentId._id.toString(),
-            firstName: comment.parentId.firstName || "",
-            lastName: comment.parentId.lastName || "",
-            avatar: comment.parentId.avatar,
-          }
-        : null,
+      parentId: parentAuthor,
       originalCommentId: comment.originalCommentId?._id?.toString() || null,
     };
 
