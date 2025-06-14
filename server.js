@@ -2,8 +2,12 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import onCall from "./socket-event/onCall.js";
+import onCallAccepted from "./socket-event/onCallAccepted.js";
+import onCallRejected from "./socket-event/onCallRejected.js";
 import onWebrtcSignal from "./socket-event/onWebrtcSignal.js";
 import onHangup from "./socket-event/onHangup.js";
+import pkg from "wrtc";
+const { RTCPeerConnection, RTCIceCandidate } = pkg;
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -62,7 +66,29 @@ app.prepare().then(() => {
 
     //call event
     socket.on("call", onCall);
+
+    socket.on("callAccepted", onCallAccepted);
+    // socket.on("callAccepted", onCallRejected);
     socket.on("webrtcSignal", onWebrtcSignal);
+
+    // Khi nhận tín hiệu offer từ client, gửi offer đến client còn lại
+    socket.on("offer", (offer, to) => {
+      console.log("Sending offer to: " + to);
+      socket.to(to).emit("offer", offer);
+    });
+
+    // Khi nhận tín hiệu answer từ client, gửi answer đến client còn lại
+    socket.on("answer", (answer, to) => {
+      console.log("Sending answer to: " + to);
+      socket.to(to).emit("answer", answer);
+    });
+
+    // Khi nhận tín hiệu ICE candidates từ client, gửi đến client còn lại
+    socket.on("candidate", (candidate, to) => {
+      console.log("Sending candidate to: " + to);
+      socket.to(to).emit("candidate", candidate);
+    });
+
     socket.on("hangup", onHangup);
   });
 
