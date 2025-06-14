@@ -1,5 +1,5 @@
 // actions/report.action.ts
-import Report from "@/database/report.model"; // Import model Report
+import Report from "@/database/report.model";
 import mongoose, { Schema } from "mongoose";
 import { connectToDatabase } from "../mongoose";
 import User from "@/database/user.model";

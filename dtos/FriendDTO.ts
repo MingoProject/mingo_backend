@@ -5,13 +5,13 @@ export interface FriendRequestDTO {
   receiver: string;
 }
 
-export interface FriendResponseDTO {
-  _id: Schema.Types.ObjectId;
-  avatar: string;
-  firstName: string;
-  lastName: string;
-  nickName: string;
-}
+// export interface FriendResponseDTO {
+//   _id: Schema.Types.ObjectId;
+//   avatar: string;
+//   firstName: string;
+//   lastName: string;
+//   nickName: string;
+// }
 
 export interface RequestedResponseDTO {
   _id: Schema.Types.ObjectId;
@@ -41,4 +41,19 @@ export interface FriendProfileResponseDTO {
   birthDay: Date;
   attendDate: Date;
   relation: string;
+}
+
+export interface MutualFriendDTO {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+}
+
+export interface FriendResponseDTO {
+  _id: string;
+  avatar: string;
+  firstName: string;
+  lastName: string;
+  mutualFriends: MutualFriendDTO[];
 }

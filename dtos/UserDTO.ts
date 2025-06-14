@@ -21,6 +21,55 @@ export interface AuthenticationDTO {
   token: string;
 }
 
+export interface MutualFriendDTO {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+}
+
+export interface SearchUserResponseDTO {
+  _id: string;
+  avatar: string;
+  firstName: string;
+  lastName: string;
+  mutualFriends: MutualFriendDTO[];
+}
+
+export interface MyProfileResponseDTO {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  nickName: string;
+  phoneNumber: string;
+  email: string;
+  role: string[];
+  avatar: string;
+  background: string;
+  gender: boolean;
+  address: string;
+  job: string;
+  hobbies: string[];
+  bio: string;
+  point: number;
+  relationShip: string;
+  birthDay: string;
+  attendDate: string;
+  flag: boolean;
+  // countReport: number;
+  friendIds: Schema.Types.ObjectId[];
+  followingIds: Schema.Types.ObjectId[];
+  followerIds: Schema.Types.ObjectId[];
+  bestFriendIds: Schema.Types.ObjectId[];
+  blockedIds: Schema.Types.ObjectId[];
+  // postIds: Schema.Types.ObjectId[];
+  // createAt: Date;
+  // createBy: Schema.Types.ObjectId;
+  // status: Boolean;
+  // saveIds: Schema.Types.ObjectId[];
+  // likeIds: Schema.Types.ObjectId[];
+}
+
 export interface UserResponseDTO {
   _id: string;
   firstName: string;
@@ -38,21 +87,21 @@ export interface UserResponseDTO {
   bio: string;
   point: number;
   relationShip: string;
-  birthDay: Date;
-  attendDate: Date;
+  birthDay: string;
+  attendDate: string;
   flag: boolean;
-  countReport: number;
-  friendIds: Schema.Types.ObjectId[];
-  followingIds: Schema.Types.ObjectId[];
-  followerIds: Schema.Types.ObjectId[];
-  bestFriendIds: Schema.Types.ObjectId[];
-  blockedIds: Schema.Types.ObjectId[];
-  postIds: Schema.Types.ObjectId[];
-  createAt: Date;
-  createBy: Schema.Types.ObjectId;
-  status: Boolean;
-  saveIds: Schema.Types.ObjectId[];
-  likeIds: Schema.Types.ObjectId[];
+  // countReport: number;
+  // friendIds: Schema.Types.ObjectId[];
+  // followingIds: Schema.Types.ObjectId[];
+  // followerIds: Schema.Types.ObjectId[];
+  // bestFriendIds: Schema.Types.ObjectId[];
+  // blockedIds: Schema.Types.ObjectId[];
+  // postIds: Schema.Types.ObjectId[];
+  // createAt: Date;
+  // createBy: Schema.Types.ObjectId;
+  // status: Boolean;
+  // saveIds: Schema.Types.ObjectId[];
+  // likeIds: Schema.Types.ObjectId[];
 }
 
 export interface UpdateUserDTO {
@@ -65,6 +114,13 @@ export interface UpdateUserDTO {
   hobbies: string[];
   relationShip: string;
   birthDay: Date;
+}
+
+export interface UserBasicInfo {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  avatar: string;
 }
 
 export interface UpdateUserBioDTO {

@@ -1,5 +1,5 @@
-import { UserResponseDTO } from "@/dtos/UserDTO";
-import { getLikesByCommentId } from "@/lib/actions/comment.action";
+import { PostResponseDTO } from "@/dtos/PostDTO";
+import { getAllPosts, getTrendingPosts } from "@/lib/actions/post.action";
 import corsMiddleware, {
   authenticateToken,
 } from "@/middleware/auth-middleware";
@@ -7,20 +7,13 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UserResponseDTO[] | { message: string }>
+  res: NextApiResponse<PostResponseDTO[] | { message: string }>
 ) {
   await corsMiddleware(req, res, async () => {
     if (req.method === "GET") {
       try {
-        const { commentId } = req.query;
-
-        if (!commentId) {
-          return res.status(400).json({ message: "Comment ID is required" });
-        }
-
-        const users = await getLikesByCommentId(commentId as string);
-
-        res.status(200).json(users);
+        const posts = await getTrendingPosts();
+        res.status(200).json(posts);
       } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal Server Error" });

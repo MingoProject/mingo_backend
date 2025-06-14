@@ -1607,6 +1607,10 @@ export async function isOnline(userId: string) {
 
     const user = await User.findById(new mongoose.Types.ObjectId(userId));
 
+    if (!user) {
+      return null;
+    }
+
     await User.updateOne(
       { _id: new mongoose.Types.ObjectId(userId) },
       { $set: { status: true } }
@@ -1647,6 +1651,9 @@ export async function isOffline(userId: string) {
     }
 
     const user = await User.findById(new mongoose.Types.ObjectId(userId));
+    if (!user) {
+      return null;
+    }
 
     if (user) {
       await User.updateOne(

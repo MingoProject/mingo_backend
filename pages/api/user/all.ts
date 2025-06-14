@@ -1,4 +1,4 @@
-import { UserResponseDTO } from "@/dtos/UserDTO";
+import { SearchUserResponseDTO } from "@/dtos/UserDTO";
 import { getAllUsers } from "@/lib/actions/user.action";
 import corsMiddleware, {
   authenticateToken,
@@ -7,12 +7,18 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<UserResponseDTO[] | { message: string }>
+  res: NextApiResponse<SearchUserResponseDTO[] | { message: string }>
 ) {
   await corsMiddleware(req, res, async () => {
     if (req.method === "GET") {
       try {
-        const users = await getAllUsers();
+        const { userId } = req.query;
+
+        if (!userId) {
+          return res.status(400).json({ message: "User ID is required" });
+        }
+
+        const users = await getAllUsers(userId as string);
         res.status(200).json(users);
       } catch (error) {
         console.error(error);
