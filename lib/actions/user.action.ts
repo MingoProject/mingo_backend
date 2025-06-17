@@ -25,7 +25,7 @@ import { PostResponseDTO } from "@/dtos/PostDTO";
 const saltRounds = 10;
 
 export async function getAllUsers(
-  userId: string | undefined
+  userId?: string | undefined
 ): Promise<SearchUserResponseDTO[]> {
   try {
     connectToDatabase();
@@ -467,29 +467,20 @@ export async function getMyPosts(id: string | undefined) {
     await connectToDatabase();
 
     const posts = await Post.find({ author: id })
-      .populate({
-        path: "author",
-        select: "_id firstName lastName avatar",
-      })
-      .populate({
-        path: "media",
-        select: "_id url type",
-      })
-      .populate({
-        path: "tags",
-        select: "_id firstName lastName avatar",
-      })
+      .populate("author", "_id firstName lastName avatar")
+      .populate("media", "_id url type caption")
+      .populate("tags", "_id firstName lastName avatar")
       .lean();
 
     const result: PostResponseDTO[] = posts.map((post: any) => ({
       _id: String(post._id),
       content: post.content,
-      media:
-        post.media?.map((m: any) => ({
-          _id: String(m._id),
-          url: m.url,
-          type: m.type,
-        })) || [],
+      media: post.media?.map((m: any) => ({
+        _id: String(m._id),
+        url: m.url,
+        type: m.type,
+        caption: m.caption,
+      })),
       createdAt: new Date(post.createdAt),
       author: {
         _id: String(post.author._id),
