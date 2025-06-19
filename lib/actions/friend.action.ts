@@ -120,6 +120,9 @@ export async function unfollowUser(param: FriendRequestDTO) {
     });
 
     if (!deletedRelation) {
+      throw new Error("Friend relation not found or already deleted");
+    }
+    if (!deletedRelation) {
       console.log("Relation not found or already deleted");
     } else {
       console.log("Relation deleted:", deletedRelation);

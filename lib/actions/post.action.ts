@@ -16,18 +16,9 @@ export async function getAllPosts(): Promise<PostResponseDTO[]> {
     await connectToDatabase();
 
     const posts = await Post.find()
-      .populate({
-        path: "author",
-        select: "_id firstName lastName avatar",
-      })
-      .populate({
-        path: "media",
-        select: "_id url type",
-      })
-      .populate({
-        path: "tags",
-        select: "_id firstName lastName avatar",
-      })
+      .populate("author", "_id firstName lastName avatar")
+      .populate("media", "_id url type caption")
+      .populate("tags", "_id firstName lastName avatar")
       .lean();
 
     const result: PostResponseDTO[] = posts.map((post: any) => ({
@@ -37,6 +28,7 @@ export async function getAllPosts(): Promise<PostResponseDTO[]> {
         _id: String(m._id),
         url: m.url,
         type: m.type,
+        caption: m.caption,
       })),
       createdAt: new Date(post.createdAt),
       author: {
@@ -101,7 +93,7 @@ export async function getRelevantPosts(
       .skip(skip)
       .limit(limit)
       .populate("author", "_id firstName lastName avatar")
-      .populate("media", "_id url type")
+      .populate("media", "_id url type caption")
       .populate("tags", "_id firstName lastName avatar")
       .lean();
 
@@ -112,6 +104,7 @@ export async function getRelevantPosts(
         _id: String(m._id),
         url: m.url,
         type: m.type,
+        caption: m.caption,
       })),
       createdAt: new Date(post.createdAt),
       author: {
@@ -525,18 +518,9 @@ export const getTrendingPosts = async (): Promise<PostResponseDTO[]> => {
     await connectToDatabase();
 
     const posts = await Post.find({ flag: true })
-      .populate({
-        path: "author",
-        select: "_id firstName lastName avatar",
-      })
-      .populate({
-        path: "media",
-        select: "_id url type",
-      })
-      .populate({
-        path: "tags",
-        select: "_id firstName lastName avatar",
-      })
+      .populate("author", "_id firstName lastName avatar")
+      .populate("media", "_id url type caption")
+      .populate("tags", "_id firstName lastName avatar")
       .lean();
 
     const scoredPosts = posts.map((post: any) => {
@@ -566,6 +550,7 @@ export const getTrendingPosts = async (): Promise<PostResponseDTO[]> => {
         _id: String(m._id),
         url: m.url,
         type: m.type,
+        caption: m.caption,
       })),
       createdAt: new Date(post.createdAt),
       author: {
